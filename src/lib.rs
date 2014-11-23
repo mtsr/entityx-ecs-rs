@@ -59,15 +59,19 @@ impl<'a> Entity<'a> {
         }
     }
 
-    pub fn get_index(&self) -> u32 {
+    pub fn assign<C: 'static + Clone + Copy>(&self, component: C) {
+        self.manager.upgrade().unwrap().borrow_mut().assign_component(self, component);
+    }
+
+    pub fn index(&self) -> u32 {
         self.id.index
     }
 
-    pub fn get_version(&self) -> u32 {
+    pub fn version(&self) -> u32 {
         self.id.version
     }
 
-    pub fn get_id(&self) -> EntityId {
+    pub fn id(&self) -> EntityId {
         self.id
     }
 }
@@ -75,7 +79,7 @@ impl<'a> Entity<'a> {
 impl<'a> PartialEq for Entity<'a> {
     fn eq(&self, other: &Entity) -> bool {
         // TODO upgrade really needed?
-        self.get_id() == other.get_id() && self.manager.upgrade() == other.manager.upgrade()
+        self.id() == other.id() && self.manager.upgrade() == other.manager.upgrade()
     }
 }
 
@@ -115,7 +119,7 @@ impl EntityManager {
         }
     }
 
-    pub fn register_component<C: 'static>(&mut self) {
+    pub fn register_component<C: 'static + Clone + Copy>(&mut self) {
         if self.components.contains::<C>() {
             panic!("Tried to register component twice");
         }
@@ -123,10 +127,16 @@ impl EntityManager {
         self.components.insert::<Vec<C>>(component_list);
     }
 
-    pub fn assign<C: 'static>(&mut self, entity: &Entity, component: C) {
+    pub fn assign_component<C: 'static + Clone + Copy>(&mut self, entity: &Entity, component: C) {
         match self.components.get_mut::<Vec<C>>() {
             Some(component_list) => {
-                component_list[entity.get_index() as uint] = component;
+                // ensure component_list size by adding copies of component
+                // require component to be Clone + Copy
+                if component_list.len() <= entity.index() as uint {
+                    component_list.grow(self.entity_version.len(), component);
+                }
+
+                component_list[entity.index() as uint] = component;
             },
             None => panic!("Tried to assign unregistered component")
         };
