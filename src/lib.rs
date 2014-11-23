@@ -2,8 +2,11 @@ extern crate anymap;
 
 use anymap::AnyMap;
 
+use std::rc::{ Rc, Weak };
+use std::cell::RefCell;
+
 pub trait System {
-    fn update<A>(&self, entities: &EntityManager, args: A);
+    fn update<A>(&self, entities: Rc<RefCell<EntityManager>>, args: A);
 }
 
 pub struct SystemManager {
@@ -21,7 +24,7 @@ impl SystemManager {
         self.systems.insert(*system);
     }
 
-    pub fn update<S: System + 'static, A>(&self, entities: &EntityManager, args: A) {
+    pub fn update<S: System + 'static, A>(&self, entities: Rc<RefCell<EntityManager>>, args: A) {
         match self.systems.get::<S>() {
             Some(system) => {
                 system.update(entities, args);
@@ -31,32 +34,50 @@ impl SystemManager {
     }
 }
 
-pub struct Entity<'a> {
+pub struct EntityId {
     index: u32,
-    version: u32,
-    // removed because it would prevent other &mut access 
-    // manager: &EntityManager
+    version: u32
+}
+
+impl PartialEq for EntityId {
+    fn eq(&self, other: &EntityId) -> bool {
+        self.index == other.index && self.version == other.version
+    }
+}
+
+pub struct Entity<'a> {
+    id: EntityId,
+    manager: Weak<RefCell<EntityManager>>,
 }
 
 impl<'a> Entity<'a> {
+    pub fn new(manager: Weak<RefCell<EntityManager>>) -> Entity<'a> {
+        Entity {
+            // TODO unwrap unsafe?
+            id: manager.upgrade().unwrap().borrow_mut().create_id(),
+            manager: manager,
+        }
+    }
+
     pub fn get_index(&self) -> u32 {
-        self.index
+        self.id.index
     }
 
     pub fn get_version(&self) -> u32 {
-        self.version
+        self.id.version
     }
 
-    pub fn get_id(&self) -> u64 {
-        self.version as u64 << 32u & self.index as u64
+    pub fn get_id(&self) -> EntityId {
+        self.id
     }
 }
 
-// impl<'a> PartialEq for Entity<'a> {
-//     fn eq(&self, other: &Entity) -> bool {
-//         self.index == other.index && self.version == other.version && self.manager == other.manager
-//     }
-// }
+impl<'a> PartialEq for Entity<'a> {
+    fn eq(&self, other: &Entity) -> bool {
+        // TODO upgrade really needed?
+        self.get_id() == other.get_id() && self.manager.upgrade() == other.manager.upgrade()
+    }
+}
 
 pub struct EntityManager {
     index_counter: u32,
@@ -68,18 +89,18 @@ pub struct EntityManager {
 }
 
 impl EntityManager {
-    pub fn new() -> EntityManager {
-        EntityManager {
+    pub fn new() -> Rc<RefCell<EntityManager>> {
+        Rc::new(RefCell::new(EntityManager {
             index_counter: 0,
             free_index_list: Vec::with_capacity(32),
 
             entity_version: Vec::from_elem(256, 0),
 
             components: AnyMap::new()
-        }
+        }))
     }
 
-    pub fn create(&mut self) -> Entity {
+    pub fn create_id(&mut self) -> EntityId {
         let index = match self.free_index_list.pop() {
             Some(result) => result,
             None => {
@@ -88,10 +109,9 @@ impl EntityManager {
             }
         };
         let version = self.entity_version[index as uint];
-        Entity {
+        EntityId {
             index: index,
             version: version,
-            // manager: self
         }
     }
 
