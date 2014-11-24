@@ -4,6 +4,8 @@ use anymap::AnyMap;
 
 use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
+use std::iter::{ Iterator, Filter, Map };
+use std::slice::Items;
 
 pub trait System {
     fn update<A>(&self, entities: Rc<RefCell<EntityManager>>, args: A);
@@ -123,23 +125,26 @@ impl EntityManager {
         if self.components.contains::<C>() {
             panic!("Tried to register component twice");
         }
-        let component_list: Vec<C> = Vec::with_capacity(self.entity_version.len());
-        self.components.insert::<Vec<C>>(component_list);
+        let component_list: Vec<Option<C>> = Vec::from_elem(self.entity_version.len(), None);
+        self.components.insert::<Vec<Option<C>>>(component_list);
     }
 
     pub fn assign_component<C: 'static + Clone + Copy>(&mut self, entity: &Entity, component: C) {
-        match self.components.get_mut::<Vec<C>>() {
+        match self.components.get_mut::<Vec<Option<C>>>() {
             Some(component_list) => {
-                // ensure component_list size by adding copies of component
-                // require component to be Clone + Copy
-                if component_list.len() <= entity.index() as uint {
-                    component_list.grow(self.entity_version.len(), component);
-                }
-
-                component_list[entity.index() as uint] = component;
+                component_list[entity.index() as uint] = Some(component);
             },
             None => panic!("Tried to assign unregistered component")
         };
+    }
+
+    pub fn entities_with_component<C: 'static>(&self) -> Map<&Option<C>, &C, Filter<&Option<C>, Items<Option<C>>>> {
+        match self.components.get::<Vec<Option<C>>>() {
+            Some(component_list) => {
+                component_list.iter().filter(|o| o.is_some()).map(|o| o.as_ref().unwrap())
+            },
+            None => panic!("Tried to get unregistered component")
+        }
     }
 }
 
@@ -148,3 +153,14 @@ impl PartialEq for EntityManager {
         self == other
     }
 }
+
+// struct EntityWithComponentIterator {
+//     index: u32,
+//     manager: Rc<RefCell<EntityManager>>,
+// }
+
+// impl Iterator<Entity<'static>> for EntityWithComponentIterator {
+//     fn next(&mut self) -> Option<Entity> {
+
+//     }
+// }
