@@ -61,7 +61,7 @@ impl<'a> Entity<'a> {
         }
     }
 
-    pub fn assign<C: 'static + Clone + Copy>(&self, component: C) {
+    pub fn assign<C: 'static>(&self, component: C) {
         self.manager.upgrade().unwrap().borrow_mut().assign_component(self, component);
     }
 
@@ -121,15 +121,15 @@ impl EntityManager {
         }
     }
 
-    pub fn register_component<C: 'static + Clone + Copy>(&mut self) {
+    pub fn register_component<C: 'static>(&mut self) {
         if self.components.contains::<C>() {
             panic!("Tried to register component twice");
         }
-        let component_list: Vec<Option<C>> = Vec::from_elem(self.entity_version.len(), None);
+        let component_list: Vec<Option<C>> = Vec::from_fn(self.entity_version.len(), |index| None);
         self.components.insert::<Vec<Option<C>>>(component_list);
     }
 
-    pub fn assign_component<C: 'static + Clone + Copy>(&mut self, entity: &Entity, component: C) {
+    pub fn assign_component<C: 'static>(&mut self, entity: &Entity, component: C) {
         match self.components.get_mut::<Vec<Option<C>>>() {
             Some(component_list) => {
                 component_list[entity.index() as uint] = Some(component);
