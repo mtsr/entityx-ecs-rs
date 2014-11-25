@@ -37,8 +37,8 @@ impl SystemManager {
 }
 
 pub struct EntityId {
-    index: u32,
-    version: u32
+    index: uint,
+    version: uint
 }
 
 impl PartialEq for EntityId {
@@ -65,11 +65,11 @@ impl<'a> Entity<'a> {
         self.manager.upgrade().unwrap().borrow_mut().assign_component(self, component);
     }
 
-    pub fn index(&self) -> u32 {
+    pub fn index(&self) -> uint {
         self.id.index
     }
 
-    pub fn version(&self) -> u32 {
+    pub fn version(&self) -> uint {
         self.id.version
     }
 
@@ -86,10 +86,10 @@ impl<'a> PartialEq for Entity<'a> {
 }
 
 pub struct EntityManager {
-    index_counter: u32,
-    free_index_list: Vec<u32>,
+    index_counter: uint,
+    free_index_list: Vec<uint>,
 
-    entity_version: Vec<u32>,
+    entity_version: Vec<uint>,
 
     components: AnyMap,
 }
@@ -114,7 +114,7 @@ impl EntityManager {
                 self.index_counter - 1
             }
         };
-        let version = self.entity_version[index as uint];
+        let version = self.entity_version[index];
         EntityId {
             index: index,
             version: version,
@@ -132,7 +132,7 @@ impl EntityManager {
     pub fn assign_component<C: 'static>(&mut self, entity: &Entity, component: C) {
         match self.components.get_mut::<Vec<Option<C>>>() {
             Some(component_list) => {
-                component_list[entity.index() as uint] = Some(component);
+                component_list[entity.index()] = Some(component);
             },
             None => panic!("Tried to assign unregistered component")
         };
@@ -153,14 +153,3 @@ impl PartialEq for EntityManager {
         self == other
     }
 }
-
-// struct EntityWithComponentIterator {
-//     index: u32,
-//     manager: Rc<RefCell<EntityManager>>,
-// }
-
-// impl Iterator<Entity<'static>> for EntityWithComponentIterator {
-//     fn next(&mut self) -> Option<Entity> {
-
-//     }
-// }
