@@ -173,6 +173,15 @@ impl<'a> EntityManager {
         }
     }
 
+    pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> &'a Option<C> {
+        match self.component_lists.get::<Vec<Option<C>>>() {
+            Some(component_list) => {
+                &component_list[entity.index()]
+            },
+            None => panic!("Tried to get unregistered component")
+        }
+    }
+
     pub fn entities(&self) -> EntityIterator {
         EntityIterator {
             entity_manager: self.weak_self.as_ref().unwrap().clone(),
