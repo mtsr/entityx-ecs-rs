@@ -55,11 +55,7 @@ pub struct Entity {
     manager: Weak<RefCell<EntityManager>>,
 }
 
-impl Entity {
-    pub fn assign<C: 'static>(&self, component: C) {
-        self.manager.upgrade().unwrap().borrow_mut().assign_component(self, component);
-    }
-
+impl<'a> Entity {
     pub fn index(&self) -> uint {
         self.id.index
     }
@@ -96,7 +92,7 @@ pub struct EntityManager {
     weak_self: Option<Weak<RefCell<EntityManager>>>,
 }
 
-impl EntityManager {
+impl<'a> EntityManager {
     pub fn new() -> Rc<RefCell<EntityManager>> {
         let entity_manager = Rc::new(RefCell::new(EntityManager {
             entity_index_counter: 0,
@@ -170,6 +166,13 @@ impl EntityManager {
         };
     }
 
+    pub fn has_component<C: 'static>(&self, entity: &Entity) -> bool {
+        match self.component_indices.get(&TypeId::of::<C>().hash()) {
+            Some(index) => self.entity_component_masks[entity.index()][*index],
+            None => panic!("Tried to check for unregistered component")
+        }
+    }
+
     pub fn entities(&self) -> EntityIterator {
         EntityIterator {
             entity_manager: self.weak_self.as_ref().unwrap().clone(),
@@ -210,10 +213,12 @@ impl<'a> Iterator<Entity> for EntityIterator<'a> {
                 continue;
             }
 
+            let version = self.entity_manager.upgrade().unwrap().borrow().entity_versions[self.index];
+
             let result = Some(Entity {
                 id: EntityId {
                     index: self.index,
-                    version: self.entity_manager.upgrade().unwrap().borrow().entity_versions[self.index]
+                    version: version,
                 },
                 manager: self.entity_manager.clone(),
             });
