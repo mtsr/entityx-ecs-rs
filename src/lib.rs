@@ -9,8 +9,8 @@ use std::collections::{ BinaryHeap, Bitv, HashMap };
 use std::uint;
 use std::intrinsics::TypeId;
 
-pub trait System {
-    fn update<A>(&self, entities: Rc<RefCell<EntityManager>>, args: A);
+pub trait System<A> {
+    fn update(&self, entities: Rc<RefCell<EntityManager>>, args: &A);
 }
 
 pub struct SystemManager {
@@ -24,11 +24,11 @@ impl SystemManager {
         }
     }
 
-    pub fn register<S: System + 'static>(&mut self, system: S) {
+    pub fn register<A, S: System<A> + 'static>(&mut self, system: S) {
         self.systems.insert(system);
     }
 
-    pub fn update<S: System + 'static, A>(&self, entities: Rc<RefCell<EntityManager>>, args: A) {
+    pub fn update<A, S: System<A> + 'static>(&self, entities: Rc<RefCell<EntityManager>>, args: &A) {
         match self.systems.get::<S>() {
             Some(system) => {
                 system.update(entities, args);
