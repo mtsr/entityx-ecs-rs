@@ -24,8 +24,8 @@ impl SystemManager {
         }
     }
 
-    pub fn register<S: System + 'static>(&mut self, system: Box<S>) {
-        self.systems.insert(*system);
+    pub fn register<S: System + 'static>(&mut self, system: S) {
+        self.systems.insert(system);
     }
 
     pub fn update<S: System + 'static, A>(&self, entities: Rc<RefCell<EntityManager>>, args: A) {
