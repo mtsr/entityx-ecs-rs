@@ -136,6 +136,11 @@ impl<'a> EntityManager {
         }
     }
 
+    fn is_valid(&self, entity: &Entity) -> bool {
+        entity.index() < self.entity_index_counter
+        && entity.version() == self.entity_versions[entity.index()]
+    }
+
     pub fn register_component<C: 'static>(&mut self) {
         if self.component_lists.contains::<C>() {
             panic!("Tried to register component twice");
@@ -154,6 +159,7 @@ impl<'a> EntityManager {
     }
 
     pub fn assign_component<C: 'static>(&mut self, entity: &Entity, component: C) {
+        assert!(self.is_valid(entity));
         match self.component_lists.get_mut::<Vec<Option<C>>>() {
             Some(component_list) => {
                 component_list[entity.index()] = Some(component);
@@ -167,6 +173,7 @@ impl<'a> EntityManager {
     }
 
     pub fn has_component<C: 'static>(&self, entity: &Entity) -> bool {
+        assert!(self.is_valid(entity));
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => self.entity_component_masks[entity.index()][*index],
             None => panic!("Tried to check for unregistered component")
@@ -174,6 +181,7 @@ impl<'a> EntityManager {
     }
 
     pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> &'a Option<C> {
+        assert!(self.is_valid(entity));
         match self.component_lists.get::<Vec<Option<C>>>() {
             Some(component_list) => {
                 &component_list[entity.index()]
