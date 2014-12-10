@@ -1,3 +1,5 @@
+#![macro_escape]
+#![feature(macro_rules)]
 extern crate anymap;
 
 use anymap::AnyMap;
@@ -271,3 +273,77 @@ impl<'a> Iterator<Entity> for EntityIterator<'a> {
         None
     }
 }
+
+#[macro_export]
+macro_rules! entities_with_components_inner(
+    ( $em:ident, $already:expr : ) => ( $already );
+    ( $em:ident, $already:expr : with $ty:path $( $kinds:ident $types:path )* ) => (
+        entities_with_components_inner!( $em, $already.and_then(|tuple| {
+            let comp = $em.get_component::<$ty>(&tuple.0);
+            match *comp {
+                Some(ref obj) => Some( tuple.tup_append(obj) ),
+                None => None
+            }
+        } ) : $( $kinds $types )* )
+    );
+    ( $em:ident, $already:expr : without $ty:path $( $kinds:ident $types:path )* ) => (
+        entities_with_components_inner!( $em, $already.and_then(|tuple|
+            if let &Some(_) = $em.get_component::<$ty>(&tuple.0) {
+                None
+            } else {
+                Some(tuple)
+            }
+        ) : $( $kinds $types )* )
+    );
+    ( $em:ident, $already:expr : option $ty:path $( $kinds:ident $types:path )* ) => (
+        entities_with_components_inner!( $em, $already.map(|tuple| {
+            let comp = $em.get_component::<$ty>(&tuple.0).as_ref();
+            tuple.tup_append( comp )
+        } ) : $( $kinds $types )* )
+    );
+)
+
+#[macro_export]
+macro_rules! entities_with_components(
+    ( $em:ident : $( $kinds:ident $types:path )* ) => (
+        $em.entities().filter_map(|entity|
+            entities_with_components_inner!($em, Some((entity,)): $( $kinds $types )* )
+        )
+    );
+)
+
+pub trait TupAppend<T, Result> {
+    fn tup_append(self, x: T) -> Result;
+}
+ 
+impl<A, B> TupAppend<B, (A,B)> for (A,) {
+    fn tup_append(self, x: B) -> (A, B) {
+        (self.0, x)
+    }
+}
+ 
+impl<A, B, C> TupAppend<C, (A,B,C)> for (A, B) {
+    fn tup_append(self, x: C) -> (A, B, C) {
+        (self.0, self.1, x)
+    }
+}
+
+impl<A, B, C, D> TupAppend<D, (A,B,C,D)> for (A, B, C) {
+    fn tup_append(self, x: D) -> (A, B, C, D) {
+        (self.0, self.1, self.2, x)
+    }
+}
+
+impl<A, B, C, D, E> TupAppend<E, (A,B,C,D,E)> for (A, B, C, D) {
+    fn tup_append(self, x: E) -> (A, B, C, D, E) {
+        (self.0, self.1, self.2, self.3, x)
+    }
+}
+
+impl<A, B, C, D, E, F> TupAppend<F, (A,B,C,D,E,F)> for (A, B, C, D, E) {
+    fn tup_append(self, x: F) -> (A, B, C, D, E, F) {
+        (self.0, self.1, self.2, self.3, self.4, x)
+    }
+}
+
+// TODO possibly need longer TupAppend
