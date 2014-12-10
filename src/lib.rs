@@ -163,6 +163,9 @@ impl<'a> EntityManager {
             // dynamically grow bitv length, only needed if new component_lists can be registered later
             entity_component_mask.grow(length, false);
         }
+
+        // Store a None for returning as &Option<C> later
+        self.component_lists.insert::<Option<C>>(None);
     }
 
     pub fn assign_component<C: 'static>(&mut self, entity: &Entity, component: C) {
@@ -187,24 +190,25 @@ impl<'a> EntityManager {
         }
     }
 
-    pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> Option<&C> {
+    pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> &Option<C> {
         assert!(self.is_valid(entity));
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => {
                 if !self.entity_component_masks[entity.index()][*index] {
-                    return None;
+                    // get correctly typed &None from anymap
+                    match self.component_lists.get::<Option<C>>() {
+                        Some(option) => {
+                            return option;
+                        },
+                        None => panic!("Tried to get unregistered component"),
+                    }
                 }
             },
             None => panic!("Tried to get unregistered component"),
         }
         match self.component_lists.get::<Vec<Option<C>>>() {
             Some(component_list) => {
-                // TODO fix unwrapping+wrapping
-                if let Some(ref component) = component_list[entity.index()] {
-                    Some(component)
-                } else {
-                    None
-                }
+                &component_list[entity.index()]
             },
             None => panic!("Tried to get unregistered component"),
         }
