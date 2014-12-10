@@ -116,8 +116,9 @@ impl<'a> EntityManager {
         let index = match self.free_entity_index_list.pop() {
             Some(result) => result,
             None => {
+                let result = self.next_entity_index;
                 self.next_entity_index += 1;
-                self.next_entity_index - 1
+                result
             }
         };
         let version = self.entity_versions[index];
@@ -134,6 +135,12 @@ impl<'a> EntityManager {
             id: self.create_id(),
             manager: self.weak_self.as_ref().unwrap().clone(),
         }
+    }
+
+    pub fn destroy_entity(&mut self, entity: Entity) {
+        self.entity_versions[entity.index()] += 1;
+        self.free_entity_index_list.push(entity.index());
+        self.entity_component_masks[entity.index()].clear();
     }
 
     fn is_valid(&self, entity: &Entity) -> bool {
@@ -164,11 +171,11 @@ impl<'a> EntityManager {
             Some(component_list) => {
                 component_list[entity.index()] = Some(component);
             },
-            None => panic!("Tried to assign unregistered component")
+            None => panic!("Tried to assign unregistered component"),
         };
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => self.entity_component_masks[entity.index()].set(*index, true),
-            None => panic!("Tried to assign unregistered component")
+            None => panic!("Tried to assign unregistered component"),
         };
     }
 
@@ -176,17 +183,30 @@ impl<'a> EntityManager {
         assert!(self.is_valid(entity));
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => self.entity_component_masks[entity.index()][*index],
-            None => panic!("Tried to check for unregistered component")
+            None => panic!("Tried to check for unregistered component"),
         }
     }
 
-    pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> &'a Option<C> {
+    pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> Option<&C> {
         assert!(self.is_valid(entity));
+        match self.component_indices.get(&TypeId::of::<C>().hash()) {
+            Some(index) => {
+                if !self.entity_component_masks[entity.index()][*index] {
+                    let result = None;
+                    return result;
+                }
+            },
+            None => panic!("Tried to get unregistered component"),
+        }
         match self.component_lists.get::<Vec<Option<C>>>() {
             Some(component_list) => {
-                &component_list[entity.index()]
+                if let Some(ref component) = component_list[entity.index()] {
+                    Some(component)
+                } else {
+                    None
+                }
             },
-            None => panic!("Tried to get unregistered component")
+            None => panic!("Tried to get unregistered component"),
         }
     }
 
