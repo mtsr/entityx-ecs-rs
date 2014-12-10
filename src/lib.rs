@@ -192,14 +192,14 @@ impl<'a> EntityManager {
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => {
                 if !self.entity_component_masks[entity.index()][*index] {
-                    let result = None;
-                    return result;
+                    return None;
                 }
             },
             None => panic!("Tried to get unregistered component"),
         }
         match self.component_lists.get::<Vec<Option<C>>>() {
             Some(component_list) => {
+                // TODO fix unwrapping+wrapping
                 if let Some(ref component) = component_list[entity.index()] {
                     Some(component)
                 } else {
