@@ -79,7 +79,7 @@ impl PartialEq for Entity {
 pub type ComponentId = u64;
 
 pub struct EntityManager {
-    entity_index_counter: uint,
+    next_entity_index: uint,
     free_entity_index_list: BinaryHeap<uint>,
 
     entity_versions: Vec<uint>,
@@ -95,7 +95,7 @@ pub struct EntityManager {
 impl<'a> EntityManager {
     pub fn new() -> Rc<RefCell<EntityManager>> {
         let entity_manager = Rc::new(RefCell::new(EntityManager {
-            entity_index_counter: 0,
+            next_entity_index: 0,
             free_entity_index_list: BinaryHeap::with_capacity(32),
 
             entity_versions: Vec::from_elem(256, 0),
@@ -116,8 +116,8 @@ impl<'a> EntityManager {
         let index = match self.free_entity_index_list.pop() {
             Some(result) => result,
             None => {
-                self.entity_index_counter += 1;
-                self.entity_index_counter - 1
+                self.next_entity_index += 1;
+                self.next_entity_index - 1
             }
         };
         let version = self.entity_versions[index];
@@ -137,7 +137,7 @@ impl<'a> EntityManager {
     }
 
     fn is_valid(&self, entity: &Entity) -> bool {
-        entity.index() < self.entity_index_counter
+        entity.index() < self.next_entity_index
         && entity.version() == self.entity_versions[entity.index()]
     }
 
@@ -193,7 +193,7 @@ impl<'a> EntityManager {
     pub fn entities(&self) -> EntityIterator {
         EntityIterator {
             entity_manager: self.weak_self.as_ref().unwrap().clone(),
-            entity_index_counter: self.entity_index_counter,
+            next_entity_index: self.next_entity_index,
             index: 0,
             free_entity_index_list: self.free_entity_index_list.iter(),
         }
@@ -208,14 +208,14 @@ impl PartialEq for EntityManager {
 
 pub struct EntityIterator<'a> {
     entity_manager: Weak<RefCell<EntityManager>>,
-    entity_index_counter: uint,
+    next_entity_index: uint,
     index: uint,
     free_entity_index_list: std::collections::binary_heap::Items<'a, uint>,
 }
 
 impl<'a> Iterator<Entity> for EntityIterator<'a> {
     fn next(&mut self) -> Option<Entity> {
-        while self.index < self.entity_index_counter {
+        while self.index < self.next_entity_index {
             let mut free_entity_index = -1;
 
             while free_entity_index < self.index {
@@ -247,72 +247,3 @@ impl<'a> Iterator<Entity> for EntityIterator<'a> {
         None
     }
 }
-
-    // pub fn entities_with_component<C: 'static>(&self) -> EntityIterator<C> {
-    //     EntityIterator {
-    //         entity_manager: self.weak_self.as_ref().unwrap().clone(),
-    //         index: 0,
-    //     }
-
-    //     // match self.component_lists.get::<Vec<Option<C>>>() {
-    //     //     Some(component_list) => {
-    //     //         component_list.iter().filter(|o| o.is_some()).map(|o| o.as_ref().unwrap())
-    //     //     },
-    //     //     None => panic!("Tried to get unregistered component")
-    //     // }
-    // }
-
-// impl<C: 'static> Iterator<(Entity, &C)> for EntityIterator<C> {
-//     fn next<'a>(&'a mut self) -> Option<(Entity, &'a C)> {
-//         let bla_entity_manager = self.entity_manager.upgrade().unwrap();
-//         let entity_manager = bla_entity_manager.borrow_mut();
-
-//         if self.index >= entity_manager.entity_index_counter {
-//             return None
-//         }
-
-//         let mut free_entity_index_list = entity_manager.free_entity_index_list.iter();
-
-//         // TODO DRY
-//         let mut free_entity_index = match free_entity_index_list.next() {
-//             Some(x) => *x,
-//             None => uint::MAX,
-//         };
-
-//         let component_list = match entity_manager.component_lists.get::<Vec<Option<C>>>() {
-//             Some(x) => x,
-//             None => panic!("Trying to access unregistered component"),
-//         };
-
-//         while (self.index < entity_manager.entity_index_counter) {
-//             while (free_entity_index < self.index) {
-//                 // TODO DRY
-//                 free_entity_index = match free_entity_index_list.next() {
-//                     Some(x) => *x,
-//                     None => uint::MAX,
-//                 }
-//             }
-
-//             if (free_entity_index == self.index) {
-//                 self.index += 1;
-//                 continue;
-//             }
-
-//             if component_list[self.index].is_none() {
-//                 self.index += 1;
-//                 continue;
-//             }
-//         }
-
-//         Some(
-//             (Entity {
-//                 id: EntityId {
-//                     index: self.index,
-//                     version: entity_manager.entity_versions[self.index]
-//                 },
-//                 manager: self.entity_manager.clone(),
-//             },
-//             component_list[self.index].unwrap())
-//         )
-//     }
-// }
