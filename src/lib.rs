@@ -10,9 +10,10 @@ use std::iter::{ Iterator };
 use std::collections::{ BinaryHeap, Bitv, HashMap };
 use std::uint;
 use std::intrinsics::TypeId;
+use std::fmt::Show;
 
-pub trait System<A> {
-    fn update(&self, entities: Rc<RefCell<EntityManager>>, args: &A);
+pub trait System {
+    fn update<A>(&self, entities: Rc<RefCell<EntityManager>>, args: &A) where A: Show;
 }
 
 pub struct SystemManager {
@@ -26,11 +27,11 @@ impl SystemManager {
         }
     }
 
-    pub fn register<A, S: System<A> + 'static>(&mut self, system: S) {
+    pub fn register<S>(&mut self, system: S) where S: System + 'static {
         self.systems.insert(system);
     }
 
-    pub fn update<A, S: System<A> + 'static>(&self, entities: Rc<RefCell<EntityManager>>, args: &A) {
+    pub fn update<A, S>(&self, entities: Rc<RefCell<EntityManager>>, args: &A) where S: System + 'static, A: Show {
         match self.systems.get::<S>() {
             Some(system) => {
                 system.update(entities, args);
