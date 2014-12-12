@@ -14,6 +14,7 @@ use std::fmt::Show;
 
 pub trait System {
     fn update<A>(&self, entities: Rc<RefCell<EntityManager>>, args: &A) where A: Show;
+    fn update<A>(&mut self, entities: Rc<RefCell<EntityManager>>, args: &A) where A: Show;
 }
 
 pub struct SystemManager {
@@ -33,6 +34,8 @@ impl SystemManager {
 
     pub fn update<A, S>(&self, entities: Rc<RefCell<EntityManager>>, args: &A) where S: System + 'static, A: Show {
         match self.systems.get::<S>() {
+    pub fn update<A, S>(&mut self, entities: Rc<RefCell<EntityManager>>, args: &A) where S: System + 'static, A: Show {
+        match self.systems.get_mut::<S>() {
             Some(system) => {
                 system.update(entities, args);
             },
