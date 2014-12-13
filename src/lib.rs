@@ -220,6 +220,30 @@ impl<'a> EntityManager {
         }
     }
 
+    pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity) -> &mut Option<C> {
+        assert!(self.is_valid(entity));
+        match self.component_indices.get_mut(&TypeId::of::<C>().hash()) {
+            Some(index) => {
+                if !self.entity_component_masks[entity.index()][*index] {
+                    // get correctly typed &None from anymap
+                    match self.component_lists.get_mut::<Option<C>>() {
+                        Some(option) => {
+                            return option;
+                        },
+                        None => panic!("Tried to get unregistered component"),
+                    }
+                }
+            },
+            None => panic!("Tried to get unregistered component"),
+        }
+        match self.component_lists.get_mut::<Vec<Option<C>>>() {
+            Some(component_list) => {
+                &mut component_list[entity.index()]
+            },
+            None => panic!("Tried to get unregistered component"),
+        }
+    }
+
     pub fn entities(&self) -> EntityIterator {
         EntityIterator {
             entity_manager: self.weak_self.as_ref().unwrap().clone(),
