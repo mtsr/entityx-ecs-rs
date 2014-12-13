@@ -91,6 +91,9 @@ pub struct EntityManager {
     entity_versions: Vec<uint>,
     entity_component_masks: Vec<Bitv>,
 
+    // TODO replace with HashMap<TypeId, Any>
+    // Where Any is Vec<Option<C>> VecMap<Option<C>> or HashMap<Option<C>>
+    // so that it's possible to access component lists without <C>
     component_lists: AnyMap,
     component_index_counter: uint,
     component_indices: HashMap<ComponentId, uint>,
@@ -158,6 +161,8 @@ impl<'a> EntityManager {
         if self.component_lists.contains::<C>() {
             panic!("Tried to register component twice");
         }
+        // TODO VecMap
+        // TODO Allow choosing Vec or VecMap
         let component_list: Vec<Option<C>> = Vec::from_fn(self.entity_versions.len(), |_| None);
         self.component_lists.insert::<Vec<Option<C>>>(component_list);
 
@@ -196,6 +201,7 @@ impl<'a> EntityManager {
         }
     }
 
+    // TODO dedup get_component and get_component_mut
     pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> &Option<C> {
         assert!(self.is_valid(entity));
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
