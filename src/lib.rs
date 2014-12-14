@@ -146,7 +146,6 @@ impl<'a> Entity {
 
 impl PartialEq for Entity {
     fn eq(&self, other: &Entity) -> bool {
-        // TODO upgrade really needed?
         self.id() == other.id() && self.manager.upgrade() == other.manager.upgrade()
     }
 }
@@ -209,7 +208,6 @@ impl<'a> EntityManager {
     pub fn create_entity(&mut self) -> Entity {
         self.entity_component_masks.push(Bitv::with_capacity(self.component_index_counter, false));
         Entity {
-            // TODO unwrap unsafe?
             id: self.create_id(),
             manager: self.weak_self.as_ref().unwrap().clone(),
         }
@@ -240,7 +238,6 @@ impl<'a> EntityManager {
         let length = self.component_index_counter;
 
         for mut entity_component_mask in self.entity_component_masks.iter_mut() {
-            // dynamically grow bitv length, only needed if new component_lists can be registered later
             entity_component_mask.grow(length, false);
         }
 
