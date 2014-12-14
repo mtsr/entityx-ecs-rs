@@ -7,6 +7,10 @@ use std::iter::{ Iterator };
 use std::intrinsics::TypeId;
 use std::uint;
 
+// TODO more DB like approach to ECS i.e. more powerful query tools
+// TODO optimize getting entities with components
+// by starting from the 'with' component with the fewest instances
+
 use anymap::AnyMap;
 
 #[deriving(Show)]
