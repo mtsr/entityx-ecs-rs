@@ -168,6 +168,7 @@ pub struct EntityManager {
     // TODO replace with HashMap<TypeId, Any>
     // Where Any is Vec<Option<C>> VecMap<Option<C>> or HashMap<Option<C>>
     // so that it's possible to access component lists without <C>
+    // TODO Add BTreeMap
     component_lists: AnyMap,
     component_datastructures: HashMap<ComponentId, ComponentDatastructure>,
     component_index_counter: uint,
