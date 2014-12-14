@@ -1,3 +1,5 @@
+// TODO allow with Player(1) style queries.
+
 #[macro_export]
 macro_rules! entities_with_components_inner(
     ( $em:ident, $already:expr : ) => ( $already );
