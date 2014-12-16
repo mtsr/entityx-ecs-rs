@@ -3,40 +3,34 @@ use std::cell::RefCell;
 
 use entity::{ EntityManager, Entity };
 
-pub trait EntityBuilder: 'static
-{
-    fn build(&mut self, &mut EntityManager, Entity);
+pub trait EntityBuilder<S>: 'static {
+    fn build(&mut self, &mut EntityManager, &mut S, Entity);
 }
 
-impl EntityBuilder for |&mut EntityManager, Entity|: 'static
-{
-    fn build(&mut self, c: &mut EntityManager, e: Entity)
-    {
-        (*self)(c, e);
+impl<S> EntityBuilder<S> for |&mut EntityManager, &mut S, Entity|: 'static {
+    fn build(&mut self, c: &mut EntityManager, s: &mut S, e: Entity) {
+        (*self)(c, s, e);
     }
 }
 
-pub trait EntityModifier: 'static
-{
-    fn modify(&mut self, &mut EntityManager, Entity);
+pub trait EntityModifier<S>: 'static {
+    fn modify(&mut self, &mut EntityManager, &mut S, Entity);
 }
 
-impl EntityModifier for |&mut EntityManager, Entity|: 'static
-{
-    fn modify(&mut self, c: &mut EntityManager, e: Entity)
-    {
-        (*self)(c, e);
+impl<S> EntityModifier<S> for |&mut EntityManager, &mut S, Entity|: 'static {
+    fn modify(&mut self, c: &mut EntityManager, s: &mut S, e: Entity) {
+        (*self)(c, s, e);
     }
 }
 
-pub struct Control<'a> {
-    builders: Vec<Box<EntityBuilder + 'static>>,
+pub struct Control<'a, S> {
+    builders: Vec<Box<EntityBuilder<S> + 'static>>,
     destroyed: Vec<Entity>,
-    modifiers: Vec<(Entity, Box<EntityModifier + 'static>)>,
+    modifiers: Vec<(Entity, Box<EntityModifier<S> + 'static>)>,
 }
 
-impl<'a> Control<'a> {
-    pub fn new() -> Control<'a> {
+impl<'a, S> Control<'a, S> {
+    pub fn new() -> Control<'a, S> {
         Control {
             builders: Vec::new(),
             destroyed: Vec::new(),
@@ -44,7 +38,7 @@ impl<'a> Control<'a> {
         }
     }
 
-    pub fn build(&mut self, builder: Box<EntityBuilder + 'static>) {
+    pub fn build(&mut self, builder: Box<EntityBuilder<S> + 'static>) {
         self.builders.push(builder);
     }
 
@@ -52,19 +46,19 @@ impl<'a> Control<'a> {
         self.destroyed.push(entity);
     }
 
-    pub fn modify(&mut self, entity: Entity, modifier: Box<EntityModifier + 'static>) {
+    pub fn modify(&mut self, entity: Entity, modifier: Box<EntityModifier<S> + 'static>) {
         self.modifiers.push((entity, modifier));
     }
 
-    pub fn apply(self, entity_manager: &Rc<RefCell<EntityManager>>) {
+    pub fn apply(self, entity_manager: &Rc<RefCell<EntityManager>>, system: &mut S) {
         let mut entity_manager = entity_manager.borrow_mut();
         for mut builder in self.builders.into_iter() {
             let entity = entity_manager.deref_mut().create_entity();
-            builder.build(entity_manager.deref_mut(), entity);
+            builder.build(entity_manager.deref_mut(), system, entity);
         }
 
         for (entity, mut modifier) in self.modifiers.into_iter() {
-            modifier.modify(entity_manager.deref_mut(), entity);
+            modifier.modify(entity_manager.deref_mut(), system, entity);
         }
 
         for entity in self.destroyed.into_iter() {

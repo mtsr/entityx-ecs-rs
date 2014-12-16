@@ -8,8 +8,8 @@ use anymap::AnyMap;
 use entity::{ EntityManager };
 use control::{ Control };
 
-pub trait System {
-    fn update<A>(&mut self, entity_manager: &Rc<RefCell<EntityManager>>, &mut Control, args: &A) where A: Show;
+pub trait System<S> {
+    fn update<A>(&mut self, entity_manager: &Rc<RefCell<EntityManager>>, &mut Control<S>, args: &A) where A: Show;
 }
 
 pub struct SystemManager {
@@ -23,16 +23,16 @@ impl SystemManager {
         }
     }
 
-    pub fn register<S>(&mut self, system: S) where S: System + 'static {
+    pub fn register<S>(&mut self, system: S) where S: System<S> + 'static {
         self.systems.insert(system);
     }
 
-    pub fn update<A, S>(&mut self, entity_manager: &Rc<RefCell<EntityManager>>, args: &A) where S: System + 'static, A: Show {
+    pub fn update<A, S>(&mut self, entity_manager: &Rc<RefCell<EntityManager>>, args: &A) where S: System<S> + 'static, A: Show {
         match self.systems.get_mut::<S>() {
             Some(system) => {
-                let mut control = Control::new();
+                let mut control: Control<S> = Control::new();
                 system.update(entity_manager, &mut control, args);
-                control.apply(entity_manager);
+                control.apply(entity_manager, system);
             },
             None => panic!("Tried to update unregistered system")
         }
