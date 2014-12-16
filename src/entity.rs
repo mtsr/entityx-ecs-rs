@@ -27,7 +27,6 @@ impl PartialEq for EntityId {
 
 pub struct Entity {
     id: EntityId,
-    manager: Weak<RefCell<EntityManager>>,
 }
 
 impl<'a> Entity {
@@ -44,11 +43,11 @@ impl<'a> Entity {
     }
 }
 
-impl PartialEq for Entity {
-    fn eq(&self, other: &Entity) -> bool {
-        self.id() == other.id() && self.manager.upgrade() == other.manager.upgrade()
-    }
-}
+// impl PartialEq for Entity {
+//     fn eq(&self, other: &Entity) -> bool {
+//         // self.id() == other.id() && self.manager.upgrade() == other.manager.upgrade()
+//     }
+// }
 
 pub type ComponentId = u64;
 
@@ -73,14 +72,11 @@ pub struct EntityManager {
     component_datastructures: HashMap<ComponentId, ComponentDatastructure>,
     component_index_counter: uint,
     component_indices: HashMap<ComponentId, uint>,
-
-    weak_self: Option<Weak<RefCell<EntityManager>>>,
 }
 
 impl<'a> EntityManager {
-    pub fn new() -> Rc<RefCell<EntityManager>> {
-        // TODO see if Rc can be removed (replaced by Box?)
-        let entity_manager = Rc::new(RefCell::new(EntityManager {
+    pub fn new() -> EntityManager {
+        EntityManager {
             next_entity_index: 0,
             free_entity_index_list: BinaryHeap::with_capacity(32),
 
@@ -92,11 +88,7 @@ impl<'a> EntityManager {
             component_index_counter: 0,
             entity_component_masks: Vec::with_capacity(256),
             component_indices: HashMap::with_capacity(32),
-
-            weak_self: None,
-        }));
-        entity_manager.borrow_mut().weak_self = Some(entity_manager.downgrade());
-        entity_manager
+        }
     }
 
     fn create_id(&mut self) -> EntityId {
@@ -119,7 +111,6 @@ impl<'a> EntityManager {
         self.entity_component_masks.push(Bitv::with_capacity(self.component_index_counter, false));
         Entity {
             id: self.create_id(),
-            manager: self.weak_self.as_ref().unwrap().clone(),
         }
     }
 
@@ -290,7 +281,7 @@ impl<'a> EntityManager {
 
     pub fn entities(&self) -> EntityIterator {
         EntityIterator {
-            entity_manager: self.weak_self.as_ref().unwrap().clone(),
+            entity_manager: self,
             next_entity_index: self.next_entity_index,
             index: 0,
             free_entity_index_list: self.free_entity_index_list.iter(),
@@ -305,7 +296,7 @@ impl PartialEq for EntityManager {
 }
 
 pub struct EntityIterator<'a> {
-    entity_manager: Weak<RefCell<EntityManager>>,
+    entity_manager: &'a EntityManager,
     next_entity_index: uint,
     index: uint,
     free_entity_index_list: binary_heap::Items<'a, uint>,
@@ -328,14 +319,13 @@ impl<'a> Iterator<Entity> for EntityIterator<'a> {
                 continue;
             }
 
-            let version = self.entity_manager.upgrade().unwrap().borrow().entity_versions[self.index];
+            let version = self.entity_manager.entity_versions[self.index];
 
             let result = Some(Entity {
                 id: EntityId {
                     index: self.index,
                     version: version,
                 },
-                manager: self.entity_manager.clone(),
             });
 
             self.index += 1;

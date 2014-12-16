@@ -9,7 +9,7 @@ use entity::{ EntityManager };
 use control::{ Control };
 
 pub trait System<S> {
-    fn update<A>(&mut self, entity_manager: &Rc<RefCell<EntityManager>>, &mut Control<S>, args: &A) where A: Show;
+    fn update<A>(&mut self, entity_manager: &EntityManager, &mut Control<S>, args: &A) where A: Show;
 }
 
 pub struct SystemManager {
@@ -27,7 +27,7 @@ impl SystemManager {
         self.systems.insert(system);
     }
 
-    pub fn update<A, S>(&mut self, entity_manager: &Rc<RefCell<EntityManager>>, args: &A) where S: System<S> + 'static, A: Show {
+    pub fn update<A, S>(&mut self, entity_manager: &mut EntityManager, args: &A) where S: System<S> + 'static, A: Show {
         match self.systems.get_mut::<S>() {
             Some(system) => {
                 let mut control: Control<S> = Control::new();

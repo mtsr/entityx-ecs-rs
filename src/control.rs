@@ -50,19 +50,19 @@ impl<'a, S> Control<'a, S> {
         self.modifiers.push((entity, modifier));
     }
 
-    pub fn apply(self, entity_manager: &Rc<RefCell<EntityManager>>, system: &mut S) {
-        let mut entity_manager = entity_manager.borrow_mut();
+    pub fn apply(self, entity_manager: &mut EntityManager, system: &mut S) {
+        let mut entity_manager = entity_manager;
         for mut builder in self.builders.into_iter() {
-            let entity = entity_manager.deref_mut().create_entity();
-            builder.build(entity_manager.deref_mut(), system, entity);
+            let entity = entity_manager.create_entity();
+            builder.build(entity_manager, system, entity);
         }
 
         for (entity, mut modifier) in self.modifiers.into_iter() {
-            modifier.modify(entity_manager.deref_mut(), system, entity);
+            modifier.modify(entity_manager, system, entity);
         }
 
         for entity in self.destroyed.into_iter() {
-            entity_manager.deref_mut().destroy_entity(entity);
+            entity_manager.destroy_entity(entity);
         }
     }
 }
