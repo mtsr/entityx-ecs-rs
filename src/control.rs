@@ -1,6 +1,3 @@
-use std::rc::{ Rc };
-use std::cell::RefCell;
-
 use entity::{ EntityManager, Entity };
 
 pub trait EntityBuilder<Id, S>: 'static {

@@ -1,8 +1,6 @@
 use std::collections::{ BinaryHeap, Bitv, VecMap, HashMap };
 use std::collections::binary_heap;
 
-use std::rc::{ Rc, Weak };
-use std::cell::RefCell;
 use std::iter::{ Iterator };
 use std::intrinsics::TypeId;
 use std::uint;

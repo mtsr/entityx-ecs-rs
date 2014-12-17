@@ -1,8 +1,5 @@
 use std::fmt::Show;
 
-use std::rc::{ Rc };
-use std::cell::RefCell;
-
 use anymap::AnyMap;
 
 use entity::{ EntityManager };
