@@ -7,6 +7,8 @@ use std::iter::{ Iterator };
 use std::intrinsics::TypeId;
 use std::uint;
 
+use std::kinds::marker;
+
 // TODO more DB like approach to ECS i.e. more powerful query tools
 // TODO optimize getting entities with components
 // by starting from the 'with' component with the fewest instances
@@ -25,11 +27,12 @@ impl PartialEq for EntityId {
     }
 }
 
-pub struct Entity {
+pub struct Entity<Id> {
     id: EntityId,
+    marker: marker::InvariantType<Id>,
 }
 
-impl<'a> Entity {
+impl<'a, Id> Entity<Id> {
     pub fn index(&self) -> uint {
         self.id.index
     }
@@ -57,7 +60,9 @@ pub enum ComponentDatastructure {
     HashMap,
 }
 
-pub struct EntityManager {
+pub struct EntityManager<Id> {
+    marker: marker::InvariantType<Id>,
+
     next_entity_index: uint,
     free_entity_index_list: BinaryHeap<uint>,
 
@@ -74,9 +79,11 @@ pub struct EntityManager {
     component_indices: HashMap<ComponentId, uint>,
 }
 
-impl<'a> EntityManager {
-    pub fn new() -> EntityManager {
+impl<'a, Id> EntityManager<Id> {
+    pub fn new() -> EntityManager<Id> {
         EntityManager {
+            marker: marker::InvariantType,
+
             next_entity_index: 0,
             free_entity_index_list: BinaryHeap::with_capacity(32),
 
@@ -107,20 +114,21 @@ impl<'a> EntityManager {
         }
     }
 
-    pub fn create_entity(&mut self) -> Entity {
+    pub fn create_entity(&mut self) -> Entity<Id> {
         self.entity_component_masks.push(Bitv::with_capacity(self.component_index_counter, false));
         Entity {
             id: self.create_id(),
+            marker: self.marker,
         }
     }
 
-    pub fn destroy_entity(&mut self, entity: Entity) {
+    pub fn destroy_entity(&mut self, entity: Entity<Id>) {
         self.entity_versions[entity.index()] += 1;
         self.free_entity_index_list.push(entity.index());
         self.entity_component_masks[entity.index()].clear();
     }
 
-    fn is_valid(&self, entity: &Entity) -> bool {
+    pub fn is_valid(&self, entity: &Entity<Id>) -> bool {
         entity.index() < self.next_entity_index
         && entity.version() == self.entity_versions[entity.index()]
     }
@@ -157,7 +165,7 @@ impl<'a> EntityManager {
         }
     }
 
-    pub fn assign_component<C: 'static>(&mut self, entity: &Entity, component: C) {
+    pub fn assign_component<C: 'static>(&mut self, entity: &Entity<Id>, component: C) {
         assert!(self.is_valid(entity));
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
@@ -193,7 +201,7 @@ impl<'a> EntityManager {
         };
     }
 
-    pub fn has_component<C: 'static>(&self, entity: &Entity) -> bool {
+    pub fn has_component<C: 'static>(&self, entity: &Entity<Id>) -> bool {
         assert!(self.is_valid(entity));
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => self.entity_component_masks[entity.index()][*index],
@@ -202,7 +210,7 @@ impl<'a> EntityManager {
     }
 
     // TODO dedup get_component and get_component_mut
-    pub fn get_component<C: 'static>(&'a self, entity: &Entity) -> Option<&C> {
+    pub fn get_component<C: 'static>(&'a self, entity: &Entity<Id>) -> Option<&C> {
         assert!(self.is_valid(entity));
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => {
@@ -241,7 +249,7 @@ impl<'a> EntityManager {
         }
     }
 
-    pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity) -> Option<&mut C> {
+    pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<Id>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
         match self.component_indices.get_mut(&TypeId::of::<C>().hash()) {
             Some(index) => {
@@ -279,7 +287,7 @@ impl<'a> EntityManager {
             None => panic!("Tried to assign unregistered component"),
         }    }
 
-    pub fn entities(&self) -> EntityIterator {
+    pub fn entities(&self) -> EntityIterator<Id> {
         EntityIterator {
             entity_manager: self,
             next_entity_index: self.next_entity_index,
@@ -289,21 +297,21 @@ impl<'a> EntityManager {
     }
 }
 
-impl PartialEq for EntityManager {
-    fn eq(&self, other: &EntityManager) -> bool {
+impl<Id> PartialEq for EntityManager<Id> {
+    fn eq(&self, other: &EntityManager<Id>) -> bool {
         self == other
     }
 }
 
-pub struct EntityIterator<'a> {
-    entity_manager: &'a EntityManager,
+pub struct EntityIterator<'a, Id: 'a> {
+    entity_manager: &'a EntityManager<Id>,
     next_entity_index: uint,
     index: uint,
     free_entity_index_list: binary_heap::Items<'a, uint>,
 }
 
-impl<'a> Iterator<Entity> for EntityIterator<'a> {
-    fn next(&mut self) -> Option<Entity> {
+impl<'a, Id> Iterator<Entity<Id>> for EntityIterator<'a, Id> {
+    fn next(&mut self) -> Option<Entity<Id>> {
         while self.index < self.next_entity_index {
             let mut free_entity_index = -1;
 
@@ -326,6 +334,7 @@ impl<'a> Iterator<Entity> for EntityIterator<'a> {
                     index: self.index,
                     version: version,
                 },
+                marker: self.entity_manager.marker,
             });
 
             self.index += 1;
@@ -333,5 +342,13 @@ impl<'a> Iterator<Entity> for EntityIterator<'a> {
         }
 
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert!(true);
     }
 }
