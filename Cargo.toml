@@ -4,8 +4,5 @@ name = "ecs"
 version = "0.0.1"
 authors = ["Jonas Matser <jonas@jonasmatser.nl>"]
 
-[dependencies.uuid]
-git = "https://github.com/rust-lang/uuid"
-
 [dependencies.anymap]
 git = "https://github.com/chris-morgan/anymap.git"
