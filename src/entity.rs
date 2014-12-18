@@ -310,8 +310,104 @@ impl<'a, Id> Iterator<Entity<Id>> for EntityIterator<'a, Id> {
 
 #[cfg(test)]
 mod tests {
+    use entity::{ EntityManager, ComponentDatastructure };
+
     #[test]
-    fn it_works() {
-        assert!(true);
+    fn created_entity_is_valid() {
+        struct World1;
+        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+
+        let entity = entity_manager.create_entity();
+        assert!(entity_manager.is_valid(&entity));
+    }
+
+    #[test]
+    fn deleted_entity_is_invalid() {
+        struct World1;
+        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+
+        let entity1 = entity_manager.create_entity();
+        let entity1_copy = entity1;
+
+        assert!(entity_manager.is_valid(&entity1_copy));
+        entity_manager.destroy_entity(entity1);
+        assert!(!entity_manager.is_valid(&entity1_copy));
+    }
+
+    #[test]
+    fn create_reuses_index() {
+        struct World1;
+        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+
+        let entity1 = entity_manager.create_entity();
+        let entity1_copy = entity1;
+
+        entity_manager.destroy_entity(entity1);
+
+        let entity3 = entity_manager.create_entity();
+        assert_eq!(entity3.id.index, entity1_copy.id.index);
+        assert_eq!(entity3.id.version, entity1_copy.id.version + 1);
+    }
+
+    #[test]
+    fn components() {
+        struct World1;
+        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+
+        // test different datastructures
+        #[deriving(PartialEq, Show)]
+        struct UnitComponent;
+        entity_manager.register_component::<UnitComponent>(ComponentDatastructure::VecMap);
+
+        #[deriving(PartialEq, Show)]
+        struct TupleComponent(int);
+        entity_manager.register_component::<TupleComponent>(ComponentDatastructure::HashMap);
+
+        #[deriving(PartialEq, Show)]
+        struct Component {
+            field: int,
+        }
+        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
+
+        let entity = entity_manager.create_entity();
+
+        // test unassigned components are None
+        {
+            let unit_component = entity_manager.get_component::<UnitComponent>(&entity);
+            assert!(unit_component.is_none());
+
+            let tuple_component = entity_manager.get_component::<TupleComponent>(&entity);
+            assert!(tuple_component.is_none());
+
+            let component = entity_manager.get_component::<Component>(&entity);
+            assert!(component.is_none());
+        }
+
+        entity_manager.assign_component::<UnitComponent>(&entity, UnitComponent);
+        entity_manager.assign_component::<TupleComponent>(&entity, TupleComponent(1));
+        entity_manager.assign_component::<Component>(&entity, Component { field: 1 });
+
+        // test assigned components
+        {
+            let unit_component = entity_manager.get_component::<UnitComponent>(&entity);
+            assert_eq!(unit_component.unwrap(), &UnitComponent);
+
+            let tuple_component = entity_manager.get_component::<TupleComponent>(&entity);
+            assert_eq!(tuple_component.unwrap(), &TupleComponent(1));
+
+            let component = entity_manager.get_component::<Component>(&entity);
+            assert_eq!(component.unwrap(), &Component { field: 1 });
+        }
+    }
+
+    #[test]
+    #[should_fail]
+    fn register_component_twice() {
+        struct World1;
+        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+
+        struct Component;
+        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
+        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
     }
 }
