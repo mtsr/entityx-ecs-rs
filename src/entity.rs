@@ -248,7 +248,7 @@ impl<'a, Id> EntityManager<Id> {
     pub fn entities(&self) -> EntityIterator<Id> {
         EntityIterator {
             entity_manager: self,
-            next_entity_index: self.next_entity_index,
+            last_entity_index: self.next_entity_index - 1, // last valid entity index
             index: 0,
             free_entity_index_list: self.free_entity_index_list.iter(),
         }
@@ -263,16 +263,18 @@ impl<Id> PartialEq for EntityManager<Id> {
 
 pub struct EntityIterator<'a, Id: 'a> {
     entity_manager: &'a EntityManager<Id>,
-    next_entity_index: uint,
+    last_entity_index: uint,
     index: uint,
     free_entity_index_list: binary_heap::Items<'a, uint>,
 }
 
 impl<'a, Id> Iterator<Entity<Id>> for EntityIterator<'a, Id> {
     fn next(&mut self) -> Option<Entity<Id>> {
-        while self.index < self.next_entity_index {
+        // for all valid entity indexes
+        while self.index <= self.last_entity_index {
             let mut free_entity_index = -1;
 
+            // find if the index is in the free_entity_index_list
             while free_entity_index < self.index {
                 free_entity_index = match self.free_entity_index_list.next() {
                     Some(x) => *x,
