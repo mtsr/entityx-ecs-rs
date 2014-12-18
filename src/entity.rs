@@ -193,6 +193,7 @@ impl<'a, Id> EntityManager<Id> {
 
     pub fn has_component<C: 'static>(&self, entity: &Entity<Id>) -> bool {
         assert!(self.is_valid(entity));
+
         match self.component_indices.get(&TypeId::of::<C>().hash()) {
             Some(index) => self.entity_component_masks[entity.index()][*index],
             None => panic!("Tried to check for unregistered component"),
@@ -202,13 +203,9 @@ impl<'a, Id> EntityManager<Id> {
     // TODO dedup get_component and get_component_mut
     pub fn get_component<C: 'static>(&'a self, entity: &Entity<Id>) -> Option<&C> {
         assert!(self.is_valid(entity));
-        match self.component_indices.get(&TypeId::of::<C>().hash()) {
-            Some(index) => {
-                if !self.entity_component_masks[entity.index()][*index] {
-                    return None;
-                }
-            },
-            None => panic!("Tried to get unregistered component"),
+
+        if !self.has_component::<C>(entity) {
+            return None;
         }
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
@@ -228,13 +225,9 @@ impl<'a, Id> EntityManager<Id> {
 
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<Id>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
-        match self.component_indices.get_mut(&TypeId::of::<C>().hash()) {
-            Some(index) => {
-                if !self.entity_component_masks[entity.index()][*index] {
-                    return None;
-                }
-            },
-            None => panic!("Tried to get unregistered component"),
+
+        if !self.has_component::<C>(entity) {
+            return None;
         }
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
