@@ -55,7 +55,8 @@ impl<'a, Id> Entity<Id> {
 pub type ComponentId = u64;
 
 pub enum ComponentDatastructure {
-    Vec,
+    // TODO consider adding Vec<C> (without Option) for C: Default
+    // Vec,
     VecMap,
     HashMap,
 }
@@ -139,10 +140,6 @@ impl<'a, Id> EntityManager<Id> {
         }
 
         match component_datastructure {
-            ComponentDatastructure::Vec => {
-                let component_list: Vec<Option<C>> = Vec::from_fn(self.entity_versions.len(), |_| None);
-                self.component_lists.insert::<Vec<Option<C>>>(component_list);
-            },
             ComponentDatastructure::VecMap => {
                 let component_list: VecMap<C> = VecMap::new();
                 self.component_lists.insert::<VecMap<C>>(component_list);
@@ -170,12 +167,6 @@ impl<'a, Id> EntityManager<Id> {
         assert!(self.is_valid(entity));
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
-            Some(&ComponentDatastructure::Vec) => {
-                // TODO Consider replacing with unsafe
-                // let component_list: &mut Vec<Option<C>> = unsafe { transmute(self.component_lists.get_mut::<Vec<Option<C>>>()) };
-                let component_list = self.component_lists.get_mut::<Vec<Option<C>>>().unwrap();
-                component_list[entity.index()] = Some(component);
-            },
             Some(&ComponentDatastructure::VecMap) => {
                 // TODO Consider replacing with unsafe
                 // let component_list: &mut VecMap<C> = unsafe { transmute(self.component_lists.get_mut::<VecMap<C>>()) };
@@ -215,11 +206,6 @@ impl<'a, Id> EntityManager<Id> {
         }
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
-            Some(&ComponentDatastructure::Vec) => {
-                // TODO unsafe unwrap here, because we know this entry exists
-                let component_list = self.component_lists.get::<Vec<Option<C>>>().unwrap();
-                component_list[entity.index()].as_ref()
-            },
             Some(&ComponentDatastructure::VecMap) => {
                 // TODO unsafe unwrap here, because we know this entry exists
                 let component_list = self.component_lists.get::<VecMap<C>>().unwrap();
@@ -246,11 +232,6 @@ impl<'a, Id> EntityManager<Id> {
         }
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
-            Some(&ComponentDatastructure::Vec) => {
-                // TODO unsafe unwrap here, because we know this entry exists
-                let component_list = self.component_lists.get_mut::<Vec<Option<C>>>().unwrap();
-                component_list[entity.index()].as_mut()
-            },
             Some(&ComponentDatastructure::VecMap) => {
                 // TODO unsafe unwrap here, because we know this entry exists
                 let component_list = self.component_lists.get_mut::<VecMap<C>>().unwrap();
