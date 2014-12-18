@@ -1,5 +1,7 @@
 use std::collections::{ BinaryHeap, Bitv, VecMap, HashMap };
 use std::collections::binary_heap;
+// TODO Consider using unsafe for transmuting Option
+// use std::mem::transmute;
 
 use std::iter::{ Iterator };
 use std::intrinsics::TypeId;
@@ -163,15 +165,20 @@ impl<'a, Id> EntityManager<Id> {
         }
     }
 
+    /// Add or replace component on entity
     pub fn assign_component<C: 'static>(&mut self, entity: &Entity<Id>, component: C) {
         assert!(self.is_valid(entity));
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
             Some(&ComponentDatastructure::Vec) => {
+                // TODO Consider replacing with unsafe
+                // let component_list: &mut Vec<Option<C>> = unsafe { transmute(self.component_lists.get_mut::<Vec<Option<C>>>()) };
                 let component_list = self.component_lists.get_mut::<Vec<Option<C>>>().unwrap();
                 component_list[entity.index()] = Some(component);
             },
             Some(&ComponentDatastructure::VecMap) => {
+                // TODO Consider replacing with unsafe
+                // let component_list: &mut VecMap<C> = unsafe { transmute(self.component_lists.get_mut::<VecMap<C>>()) };
                 let component_list = self.component_lists.get_mut::<VecMap<C>>().unwrap();
                 component_list.insert(entity.index(), component);
             },
