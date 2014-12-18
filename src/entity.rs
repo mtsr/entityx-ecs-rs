@@ -33,14 +33,17 @@ pub struct Entity<Id> {
 }
 
 impl<'a, Id> Entity<Id> {
+    #[inline]
     pub fn index(&self) -> uint {
         self.id.index
     }
 
+    #[inline]
     pub fn version(&self) -> uint {
         self.id.version
     }
 
+    #[inline]
     pub fn id(&self) -> EntityId {
         self.id
     }
