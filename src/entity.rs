@@ -139,16 +139,18 @@ impl<'a, Id> EntityManager<Id> {
 
     // TODO look into moving datastructure type into type parameter
     pub fn register_component<C: 'static>(&mut self, component_datastructure: ComponentDatastructure) {
-        if self.component_lists.contains::<C>() {
-            panic!("Tried to register component twice");
-        }
-
         match component_datastructure {
             ComponentDatastructure::VecMap => {
+                if self.component_lists.contains::<VecMap<C>>() {
+                    panic!("Tried to register component twice");
+                }
                 let component_list: VecMap<C> = VecMap::new();
                 self.component_lists.insert::<VecMap<C>>(component_list);
             },
             ComponentDatastructure::HashMap => {
+                if self.component_lists.contains::<HashMap<uint, C>>() {
+                    panic!("Tried to register component twice");
+                }
                 let component_list: HashMap<uint, C> = HashMap::new();
                 self.component_lists.insert::<HashMap<uint, C>>(component_list);
             },
