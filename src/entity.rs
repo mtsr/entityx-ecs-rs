@@ -168,28 +168,16 @@ impl<'a, Id> EntityManager<Id> {
 
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
             Some(&ComponentDatastructure::Vec) => {
-                match self.component_lists.get_mut::<Vec<Option<C>>>() {
-                    Some(component_list) => {
-                        component_list[entity.index()] = Some(component);
-                    },
-                    None => panic!("Tried to assign unregistered component"),
-                };
+                let component_list = self.component_lists.get_mut::<Vec<Option<C>>>().unwrap();
+                component_list[entity.index()] = Some(component);
             },
             Some(&ComponentDatastructure::VecMap) => {
-                match self.component_lists.get_mut::<VecMap<C>>() {
-                    Some(component_list) => {
-                        component_list.insert(entity.index(), component);
-                    },
-                    None => panic!("Tried to assign unregistered component"),
-                };
+                let component_list = self.component_lists.get_mut::<VecMap<C>>().unwrap();
+                component_list.insert(entity.index(), component);
             },
             Some(&ComponentDatastructure::HashMap) => {
-                match self.component_lists.get_mut::<HashMap<uint, C>>() {
-                    Some(component_list) => {
-                        component_list.insert(entity.index(), component);
-                    },
-                    None => panic!("Tried to assign unregistered component"),
-                };
+                let component_list = self.component_lists.get_mut::<HashMap<uint, C>>().unwrap();
+                component_list.insert(entity.index(), component);
             },
             None => panic!("Tried to assign unregistered component"),
         }
@@ -218,30 +206,22 @@ impl<'a, Id> EntityManager<Id> {
             },
             None => panic!("Tried to get unregistered component"),
         }
+
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
             Some(&ComponentDatastructure::Vec) => {
-                match self.component_lists.get::<Vec<Option<C>>>() {
-                    Some(component_list) => {
-                        component_list[entity.index()].as_ref()
-                    },
-                    None => panic!("Tried to get unregistered component"),
-                }
+                // TODO unsafe unwrap here, because we know this entry exists
+                let component_list = self.component_lists.get::<Vec<Option<C>>>().unwrap();
+                component_list[entity.index()].as_ref()
             },
             Some(&ComponentDatastructure::VecMap) => {
-                match self.component_lists.get::<VecMap<C>>() {
-                    Some(component_list) => {
-                        component_list.get(&entity.index())
-                    },
-                    None => panic!("Tried to get unregistered component"),
-                }
+                // TODO unsafe unwrap here, because we know this entry exists
+                let component_list = self.component_lists.get::<VecMap<C>>().unwrap();
+                component_list.get(&entity.index())
             },
             Some(&ComponentDatastructure::HashMap) => {
-                match self.component_lists.get::<HashMap<uint, C>>() {
-                    Some(component_list) => {
-                        component_list.get(&entity.index())
-                    },
-                    None => panic!("Tried to get unregistered component"),
-                }
+                // TODO unsafe unwrap here, because we know this entry exists
+                let component_list = self.component_lists.get::<HashMap<uint, C>>().unwrap();
+                component_list.get(&entity.index())
             },
             None => panic!("Tried to assign unregistered component"),
         }
@@ -257,33 +237,26 @@ impl<'a, Id> EntityManager<Id> {
             },
             None => panic!("Tried to get unregistered component"),
         }
+
         match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
             Some(&ComponentDatastructure::Vec) => {
-                match self.component_lists.get_mut::<Vec<Option<C>>>() {
-                    Some(component_list) => {
-                        component_list[entity.index()].as_mut()
-                    },
-                    None => panic!("Tried to get unregistered component"),
-                }
+                // TODO unsafe unwrap here, because we know this entry exists
+                let component_list = self.component_lists.get_mut::<Vec<Option<C>>>().unwrap();
+                component_list[entity.index()].as_mut()
             },
             Some(&ComponentDatastructure::VecMap) => {
-                match self.component_lists.get_mut::<VecMap<C>>() {
-                    Some(component_list) => {
-                        component_list.get_mut(&entity.index())
-                    },
-                    None => panic!("Tried to get unregistered component"),
-                }
+                // TODO unsafe unwrap here, because we know this entry exists
+                let component_list = self.component_lists.get_mut::<VecMap<C>>().unwrap();
+                component_list.get_mut(&entity.index())
             },
             Some(&ComponentDatastructure::HashMap) => {
-                match self.component_lists.get_mut::<HashMap<uint, C>>() {
-                    Some(component_list) => {
-                        component_list.get_mut(&entity.index())
-                    },
-                    None => panic!("Tried to get unregistered component"),
-                }
+                // TODO unsafe unwrap here, because we know this entry exists
+                let component_list = self.component_lists.get_mut::<HashMap<uint, C>>().unwrap();
+                component_list.get_mut(&entity.index())
             },
             None => panic!("Tried to assign unregistered component"),
-        }    }
+        }
+    }
 
     pub fn entities(&self) -> EntityIterator<Id> {
         EntityIterator {
