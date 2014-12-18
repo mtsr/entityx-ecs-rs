@@ -137,6 +137,7 @@ impl<'a, Id> EntityManager<Id> {
         && entity.version() == self.entity_versions[entity.index()]
     }
 
+    // TODO look into moving datastructure type into type parameter
     pub fn register_component<C: 'static>(&mut self, component_datastructure: ComponentDatastructure) {
         if self.component_lists.contains::<C>() {
             panic!("Tried to register component twice");
