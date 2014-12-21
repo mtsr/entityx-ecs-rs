@@ -91,7 +91,7 @@ impl<'a, Id> EntityManager<Id> {
             next_entity_index: 0,
             free_entity_index_list: BinaryHeap::with_capacity(32),
 
-            entity_versions: Vec::from_elem(256, 0),
+            entity_versions: Vec::from_elem(256, 0u),
 
             component_lists: AnyMap::new(),
             component_datastructures: HashMap::new(),
@@ -111,6 +111,12 @@ impl<'a, Id> EntityManager<Id> {
                 result
             }
         };
+
+        let capacity = self.entity_versions.capacity();
+        if index >= capacity {
+            self.entity_versions.grow(capacity * 2, 0u);
+        }
+
         let version = self.entity_versions[index];
         EntityId {
             index: index,
