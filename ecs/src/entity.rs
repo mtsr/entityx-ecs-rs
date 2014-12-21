@@ -112,9 +112,10 @@ impl<'a, Id> EntityManager<Id> {
             }
         };
 
-        let capacity = self.entity_versions.capacity();
-        if index >= capacity {
-            self.entity_versions.grow(capacity * 2, 0u);
+        if index >= self.entity_versions.capacity() {
+            // grow increases capacity in a smart way
+            // no reason to specify particular size here
+            self.entity_versions.grow(index, 0u);
         }
 
         let version = self.entity_versions[index];
