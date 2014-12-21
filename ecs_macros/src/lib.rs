@@ -17,7 +17,7 @@ macro_rules! entities_with_components_inner(
     );
     ( $em:ident, $already:expr : without $ty:path $( $kinds:ident $types:path )* ) => (
         entities_with_components_inner!( $em, $already.and_then(|tuple|
-            if let &Some(_) = $em.get_component::<$ty>(&tuple.0) {
+            if let Some(_) = $em.get_component::<$ty>(&tuple.0) {
                 None
             } else {
                 Some(tuple)
