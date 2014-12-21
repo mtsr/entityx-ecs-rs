@@ -1,3 +1,6 @@
+#![macro_escape]
+#![feature(macro_rules)]
+
 // TODO allow with Player(1) style queries.
 
 #[macro_export]

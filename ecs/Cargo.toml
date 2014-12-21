@@ -6,3 +6,6 @@ authors = ["Jonas Matser <jonas@jonasmatser.nl>"]
 
 [dependencies.anymap]
 git = "https://github.com/chris-morgan/anymap.git"
+
+[dependencies.ecs_macros]
+path = "../ecs_macros"
