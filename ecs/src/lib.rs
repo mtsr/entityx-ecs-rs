@@ -1,8 +1,7 @@
 #![feature(phase)]
+#![feature(macro_rules)]
 extern crate anymap;
 extern crate test;
-
-#[phase(plugin)] extern crate ecs_macros;
 
 pub use entity::{ EntityManager, Entity, ComponentDatastructure };
 pub use system::{ System, SystemManager };
