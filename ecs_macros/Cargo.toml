@@ -1,5 +1,0 @@
-[package]
-
-name = "ecs_macros"
-version = "0.0.1"
-authors = ["Jonas Matser <jonas@jonasmatser.nl>"]
