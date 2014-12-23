@@ -357,6 +357,9 @@ macro_rules! entities_with_components(
 #[cfg(test)]
 mod tests {
     use entity::{ EntityManager, ComponentDatastructure };
+    use std::collections::{ VecMap, HashMap };
+    use std::intrinsics::TypeId;
+    use tup_append::TupAppend;
 
     #[test]
     fn created_entity_is_valid() {
@@ -455,5 +458,23 @@ mod tests {
         struct Component;
         entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
         entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
+    }
+
+    #[test]
+    fn macro() {
+        struct World1;
+        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+
+        #[deriving(PartialEq,Show)]
+        struct Component;
+
+        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
+
+        let entity = entity_manager.create_entity();
+        entity_manager.assign_component::<Component>(&entity, Component);
+
+        for (entity, component) in entities_with_components!(entity_manager: with Component) {
+            assert_eq!(component, &Component);
+        }
     }
 }
