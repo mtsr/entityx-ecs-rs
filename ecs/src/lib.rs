@@ -19,6 +19,9 @@ mod tests {
     use std::fmt::Show;
     use std::rand;
 
+    use std::collections::{ VecMap, HashMap };
+    use std::intrinsics::TypeId;
+
     use super::{
         Entity,
         Control,
@@ -47,6 +50,8 @@ mod tests {
         entity_manager.register_component::<Cmp1>(ComponentDatastructure::VecMap);
         entity_manager.register_component::<Cmp2>(ComponentDatastructure::VecMap);
         entity_manager.register_component::<Cmp3>(ComponentDatastructure::VecMap);
+        entity_manager.register_component::<Cmp4>(ComponentDatastructure::VecMap);
+        entity_manager.register_component::<Cmp5>(ComponentDatastructure::HashMap);
 
         for i in range(0u, 100000u) {
             let entity = entity_manager.create_entity();
@@ -58,6 +63,12 @@ mod tests {
             }
             if rand::random::<f32>() > 0.1f32 {
                 entity_manager.assign_component(&entity, Cmp3);
+            }
+            if rand::random::<f32>() > 0.1f32 {
+                entity_manager.assign_component(&entity, Cmp4);
+            }
+            if rand::random::<f32>() > 0.1f32 {
+                entity_manager.assign_component(&entity, Cmp5);
             }
         }
 
@@ -77,6 +88,12 @@ mod tests {
     #[deriving(Show)]
     struct Cmp3;
 
+    #[deriving(Show)]
+    struct Cmp4;
+
+    #[deriving(Show)]
+    struct Cmp5;
+
     struct Sys;
 
     impl<Id> System<Id, Sys> for Sys {
@@ -84,7 +101,7 @@ mod tests {
 
             let mut counter = 0u;
 
-            for (entity, option_cmp2, option_cmp3) in entities_with_components!(entity_manager: without Cmp1 option Cmp2 with Cmp3) {
+            for (entity, cmp2, cmp3, cmp4, cmp5) in entities_with_components!(entity_manager: without Cmp1 with Cmp2 with Cmp3 with Cmp4 with Cmp5) {
                 counter += 1;
             }
         }
