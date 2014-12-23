@@ -1,7 +1,8 @@
 #![macro_escape]
 
 use std::collections::{ BinaryHeap, Bitv, VecMap, HashMap };
-use std::collections::binary_heap;
+use std::collections::binary_heap::{ Iter };
+
 // TODO Consider using unsafe for transmuting Option
 // use std::mem::transmute;
 
@@ -17,7 +18,7 @@ use std::kinds::marker;
 
 use anymap::AnyMap;
 
-#[deriving(Show)]
+#[deriving(Show,Clone)]
 pub struct EntityId {
     index: uint,
     version: uint
@@ -46,8 +47,17 @@ impl<'a, Id> Entity<Id> {
     }
 
     #[inline]
-    pub fn id(&self) -> EntityId {
-        self.id
+    pub fn id(&self) -> &EntityId {
+        &self.id
+    }
+}
+
+impl<Id> Clone for Entity<Id> {
+    fn clone(&self) -> Self {
+        Entity {
+            id: self.id.clone(),
+            marker: self.marker.clone(),
+        }
     }
 }
 
@@ -128,7 +138,7 @@ impl<'a, Id> EntityManager<Id> {
     }
 
     pub fn create_entity(&mut self) -> Entity<Id> {
-        self.entity_component_masks.push(Bitv::with_capacity(self.component_index_counter, false));
+        self.entity_component_masks.push(Bitv::from_elem(self.component_index_counter, false));
         Entity {
             id: self.create_id(),
             marker: self.marker,
@@ -274,7 +284,7 @@ pub struct EntityIterator<'a, Id: 'a> {
     entity_manager: &'a EntityManager<Id>,
     last_entity_index: uint,
     index: uint,
-    free_entity_index_list: binary_heap::Items<'a, uint>,
+    free_entity_index_list: Iter<'a, uint>,
 }
 
 impl<'a, Id> Iterator<Entity<Id>> for EntityIterator<'a, Id> {
@@ -343,7 +353,7 @@ macro_rules! entities_with_components_inner(
             tuple.tup_append( comp )
         } ) : $( $kinds $types )* )
     );
-)
+);
 
 #[macro_export]
 macro_rules! entities_with_components(
@@ -352,7 +362,7 @@ macro_rules! entities_with_components(
             entities_with_components_inner!($em, Some((entity,)): $( $kinds $types )* )
         )
     );
-)
+);
 
 #[cfg(test)]
 mod tests {
@@ -376,11 +386,11 @@ mod tests {
         let mut entity_manager: EntityManager<World1> = EntityManager::new();
 
         let entity1 = entity_manager.create_entity();
-        let entity1_copy = entity1;
+        let entity1_clone = entity1.clone();
 
-        assert!(entity_manager.is_valid(&entity1_copy));
+        assert!(entity_manager.is_valid(&entity1_clone));
         entity_manager.destroy_entity(entity1);
-        assert!(!entity_manager.is_valid(&entity1_copy));
+        assert!(!entity_manager.is_valid(&entity1_clone));
     }
 
     #[test]
@@ -389,13 +399,13 @@ mod tests {
         let mut entity_manager: EntityManager<World1> = EntityManager::new();
 
         let entity1 = entity_manager.create_entity();
-        let entity1_copy = entity1;
+        let entity1_clone = entity1.clone();
 
         entity_manager.destroy_entity(entity1);
 
         let entity3 = entity_manager.create_entity();
-        assert_eq!(entity3.id.index, entity1_copy.id.index);
-        assert_eq!(entity3.id.version, entity1_copy.id.version + 1);
+        assert_eq!(entity3.id.index, entity1_clone.id.index);
+        assert_eq!(entity3.id.version, entity1_clone.id.version + 1);
     }
 
     #[test]
