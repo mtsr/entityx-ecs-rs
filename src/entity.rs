@@ -9,6 +9,7 @@ use std::collections::binary_heap::{ Iter };
 use std::iter::{ Iterator };
 use std::intrinsics::TypeId;
 use std::uint;
+use std::fmt::{ Show, Formatter, Error };
 
 use std::kinds::marker;
 
@@ -58,6 +59,12 @@ impl<Id> Clone for Entity<Id> {
             id: self.id.clone(),
             marker: self.marker.clone(),
         }
+    }
+}
+
+impl<Id> Show for Entity<Id> {
+    fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
+        self.id.fmt(formatter)
     }
 }
 
