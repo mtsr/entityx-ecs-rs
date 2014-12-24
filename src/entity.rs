@@ -78,8 +78,8 @@ impl<Id> PartialEq for Entity<Id> {
 
 pub type ComponentId = u64;
 
-struct ComponentData<'a, Component: 'static> {
-    list: Box<ComponentList<'a, Component> + 'static>
+pub struct ComponentData<'a, Component: 'static> {
+    pub list: Box<ComponentList<'a, Component> + 'static>
 }
 
 pub trait ComponentList<'a, Component> {
@@ -233,6 +233,14 @@ impl<'a, Id> EntityManager<Id> {
         } else {
             panic!("Tried to get unregistered component");
         }
+    }
+
+    pub fn get_component_data<C: 'static>(&'a self) -> Option<&ComponentData<C>> {
+        self.component_data.get::<ComponentData<C>>()
+    }
+
+    pub fn get_component_data_mut<C: 'static>(&'a mut self) -> Option<&mut ComponentData<C>> {
+        self.component_data.get_mut::<ComponentData<C>>()
     }
 
     pub fn entities(&self) -> EntityIterator<Id> {

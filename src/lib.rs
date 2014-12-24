@@ -1,10 +1,9 @@
 #![feature(phase)]
 #![feature(macro_rules)]
 extern crate anymap;
-extern crate typemap;
 extern crate test;
 
-pub use entity::{ EntityManager, Entity, ComponentList };
+pub use entity::{ EntityManager, Entity, ComponentList, ComponentData };
 pub use system::{ System, SystemManager };
 pub use control::{ Control };
 
