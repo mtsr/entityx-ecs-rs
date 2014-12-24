@@ -6,6 +6,9 @@ use std::collections::binary_heap::{ Iter };
 // TODO Consider using unsafe for transmuting Option
 // use std::mem::transmute;
 
+// TODO Add Entity Templates
+// TODO Add Component Copy-on-Write from Template
+
 use std::iter::{ Iterator };
 use std::intrinsics::TypeId;
 use std::uint;
