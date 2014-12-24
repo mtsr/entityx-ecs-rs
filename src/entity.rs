@@ -1,6 +1,6 @@
 #![macro_escape]
 
-use std::collections::{ BinaryHeap, VecMap, HashMap };
+use std::collections::{ BinaryHeap, Bitv, VecMap, HashMap };
 use std::collections::binary_heap::{ Iter };
 
 // TODO Consider using unsafe for transmuting Option
@@ -79,9 +79,11 @@ impl<Id> PartialEq for Entity<Id> {
 pub type ComponentId = u64;
 
 pub struct ComponentData<'a, Component: 'static> {
+    index: uint,
     pub list: Box<ComponentList<'a, Component> + 'static>
 }
 
+// TODO Add BTreeMap
 pub trait ComponentList<'a, Component> {
     fn contains_key(&self, &uint) -> bool;
     fn get(&self, &uint) -> Option<&Component>;
@@ -119,24 +121,26 @@ pub struct EntityManager<Id> {
     free_entity_index_list: BinaryHeap<uint>,
 
     entity_versions: Vec<uint>,
+    entity_component_masks: Vec<Bitv>,
 
-    // TODO replace with HashMap<TypeId, Any>
-    // Where Any is Vec<Option<C>> VecMap<Option<C>> or HashMap<Option<C>>
-    // so that it's possible to access component lists without <C>
-    // TODO Add BTreeMap
+    next_component_index: uint,
     component_data: AnyMap,
 }
 
 impl<'a, Id> EntityManager<Id> {
     pub fn new() -> EntityManager<Id> {
+        let initial_capacity = 256u;
+
         EntityManager {
             marker: marker::InvariantType,
 
             next_entity_index: 0,
             free_entity_index_list: BinaryHeap::with_capacity(32),
 
-            entity_versions: Vec::from_elem(256, 0u),
+            entity_versions: Vec::from_elem(initial_capacity, 0u),
+            entity_component_masks: Vec::with_capacity(initial_capacity),
 
+            next_component_index: 0,
             component_data: AnyMap::new(),
         }
     }
@@ -165,6 +169,7 @@ impl<'a, Id> EntityManager<Id> {
     }
 
     pub fn create_entity(&mut self) -> Entity<Id> {
+        self.entity_component_masks.push(Bitv::from_elem(self.next_component_index, false));
         Entity {
             id: self.create_id(),
             marker: self.marker,
@@ -174,6 +179,7 @@ impl<'a, Id> EntityManager<Id> {
     pub fn destroy_entity(&mut self, entity: Entity<Id>) {
         // TODO clear/invalidate component data
         self.entity_versions[entity.index()] += 1;
+        self.entity_component_masks[entity.index()].clear();
         self.free_entity_index_list.push(entity.index());
     }
 
@@ -184,12 +190,21 @@ impl<'a, Id> EntityManager<Id> {
 
     // TODO look into moving datastructure type into type parameter
     pub fn register_component<C: 'static>(&mut self, component_list: Box<ComponentList<'a, C> + 'static>) {
-        if let None = self.component_data.get::<ComponentData<C>>() {
-            self.component_data.insert::<ComponentData<C>>(ComponentData {
-                list: component_list,
-            });
-        } else {
-            panic!("Tried to register component twice");
+        match self.component_data.get::<ComponentData<C>>() {
+            None => {
+                self.component_data.insert::<ComponentData<C>>(ComponentData {
+                    index: self.next_component_index,
+                    list: component_list,
+                });
+
+                self.next_component_index += 1;
+
+                for mut entity_component_mask in self.entity_component_masks.iter_mut() {
+                    // dynamically grow bitv length, only needed if new component types can be registered after entities have been added
+                    entity_component_mask.grow(self.next_component_index, false);
+                }
+            },
+            Some(_) => panic!("Tried to register component twice"),
         }
     }
 
@@ -197,50 +212,59 @@ impl<'a, Id> EntityManager<Id> {
     pub fn assign_component<C: 'static>(&mut self, entity: &Entity<Id>, component: C) {
         assert!(self.is_valid(entity));
 
-        if let Some(mut component_data) = self.component_data.get_mut::<ComponentData<C>>() {
+        let index = {
+            let component_data = self.get_component_data_mut::<C>();
             component_data.list.insert(entity.index(), component);
-        } else {
-            panic!("Tried to assign unregistered component");
-        }
+            component_data.index
+        };
+
+        self.entity_component_masks[entity.index()].set(index, true);
     }
 
     pub fn has_component<C: 'static>(&self, entity: &Entity<Id>) -> bool {
         assert!(self.is_valid(entity));
 
-        if let Some(component_data) = self.component_data.get::<ComponentData<C>>() {
-            component_data.list.contains_key(&entity.index())
-        } else {
-            panic!("Tried to check for unregistered component");
-        }
+        let component_data = self.get_component_data::<C>();
+        self.entity_component_masks[entity.index()].get(component_data.index).unwrap()
     }
 
     // TODO dedup get_component and get_component_mut
     pub fn get_component<C: 'static>(&'a self, entity: &Entity<Id>) -> Option<&C> {
         assert!(self.is_valid(entity));
 
-        if let Some(component_data) = self.component_data.get::<ComponentData<C>>() {
-            component_data.list.get(&entity.index())
-        } else {
-            panic!("Tried to get unregistered component");
+        if !self.has_component::<C>(entity) {
+            return None;
         }
+
+        let component_data = self.get_component_data::<C>();
+        component_data.list.get(&entity.index())
     }
 
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<Id>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
 
-        if let Some(mut component_data) = self.component_data.get_mut::<ComponentData<C>>() {
-            component_data.list.get_mut(&entity.index())
+        if !self.has_component::<C>(entity) {
+            return None;
+        }
+
+        let component_data = self.get_component_data_mut::<C>();
+        component_data.list.get_mut(&entity.index())
+    }
+
+    pub fn get_component_data<C: 'static>(&'a self) -> &ComponentData<C> {
+        if let Some(component_data) = self.component_data.get::<ComponentData<C>>() {
+            component_data
         } else {
             panic!("Tried to get unregistered component");
         }
     }
 
-    pub fn get_component_data<C: 'static>(&'a self) -> Option<&ComponentData<C>> {
-        self.component_data.get::<ComponentData<C>>()
-    }
-
-    pub fn get_component_data_mut<C: 'static>(&'a mut self) -> Option<&mut ComponentData<C>> {
-        self.component_data.get_mut::<ComponentData<C>>()
+    pub fn get_component_data_mut<C: 'static>(&'a mut self) -> &mut ComponentData<C> {
+        if let Some(component_data) = self.component_data.get_mut::<ComponentData<C>>() {
+            component_data
+        } else {
+            panic!("Tried to get unregistered component");
+        }
     }
 
     pub fn entities(&self) -> EntityIterator<Id> {
