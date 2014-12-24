@@ -79,8 +79,10 @@ impl<Id> PartialEq for Entity<Id> {
 pub type ComponentId = u64;
 
 pub struct ComponentData<'a, Component: 'static> {
-    index: uint,
+    pub index: uint,
     pub list: Box<ComponentList<'a, Component> + 'static>
+    // TODO consider adding a counter to allow ordering component checking
+    // when iterating over entities with components
 }
 
 // TODO Add BTreeMap
@@ -232,17 +234,20 @@ impl<'a, Id> EntityManager<Id> {
     pub fn get_component<C: 'static>(&'a self, entity: &Entity<Id>) -> Option<&C> {
         assert!(self.is_valid(entity));
 
-        if !self.has_component::<C>(entity) {
+        let component_data = self.get_component_data::<C>();
+
+        let has_component = self.entity_component_masks[entity.index()].get(component_data.index).unwrap();
+        if has_component {
             return None;
         }
 
-        let component_data = self.get_component_data::<C>();
         component_data.list.get(&entity.index())
     }
 
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<Id>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
 
+        // TODO get rid of double get_component_date + get_component_data_mut
         if !self.has_component::<C>(entity) {
             return None;
         }
