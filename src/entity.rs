@@ -70,11 +70,11 @@ impl<Id> Show for Entity<Id> {
     }
 }
 
-// impl PartialEq for Entity {
-//     fn eq(&self, other: &Entity) -> bool {
-//         // self.id() == other.id() && self.manager.upgrade() == other.manager.upgrade()
-//     }
-// }
+impl<Id> PartialEq for Entity<Id> {
+    fn eq(&self, other: &Entity<Id>) -> bool {
+        self.id() == other.id()
+    }
+}
 
 pub type ComponentId = u64;
 
