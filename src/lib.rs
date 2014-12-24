@@ -1,9 +1,10 @@
 #![feature(phase)]
 #![feature(macro_rules)]
 extern crate anymap;
+extern crate typemap;
 extern crate test;
 
-pub use entity::{ EntityManager, Entity, ComponentDatastructure };
+pub use entity::{ EntityManager, Entity, ComponentList };
 pub use system::{ System, SystemManager };
 pub use control::{ Control };
 
@@ -18,42 +19,38 @@ mod control;
 mod tests {
     use std::fmt::Show;
     use std::rand;
-
-    use std::collections::{ VecMap, HashMap };
-    use std::intrinsics::TypeId;
+    use std::collections::{ HashMap, VecMap };
 
     use super::{
-        Entity,
+        // Entity,
         Control,
         EntityManager,
         System,
         SystemManager,
         TupAppend, // required for components macro
-        ComponentDatastructure,
     };
 
     use test::Bencher;
 
+    #[test]
     fn test_something() {
         assert!(true);
     }
 
     #[bench]
     fn bench_something(bencher: &mut Bencher) {
-        use test::Bencher;
-
         let mut system_manager: SystemManager<World1> = SystemManager::new();
         system_manager.register(Sys);
 
         let mut entity_manager: EntityManager<World1> = EntityManager::new();
 
-        entity_manager.register_component::<Cmp1>(ComponentDatastructure::VecMap);
-        entity_manager.register_component::<Cmp2>(ComponentDatastructure::VecMap);
-        entity_manager.register_component::<Cmp3>(ComponentDatastructure::VecMap);
-        entity_manager.register_component::<Cmp4>(ComponentDatastructure::VecMap);
-        entity_manager.register_component::<Cmp5>(ComponentDatastructure::HashMap);
+        entity_manager.register_component::<Cmp1>(box VecMap::new());
+        entity_manager.register_component::<Cmp2>(box VecMap::new());
+        entity_manager.register_component::<Cmp3>(box VecMap::new());
+        entity_manager.register_component::<Cmp4>(box VecMap::new());
+        entity_manager.register_component::<Cmp5>(box HashMap::new());
 
-        for i in range(0u, 100000u) {
+        for _ in range(0u, 100000u) {
             let entity = entity_manager.create_entity();
             if rand::random::<f32>() > 0.5f32 {
                 entity_manager.assign_component(&entity, Cmp1);
@@ -97,11 +94,11 @@ mod tests {
     struct Sys;
 
     impl<Id> System<Id, Sys> for Sys {
-        fn update<A>(&mut self, entity_manager: &EntityManager<Id>, control: &mut Control<Id, Sys>, args: &A) where A: Show {
+        fn update<A>(&mut self, entity_manager: &EntityManager<Id>, _: &mut Control<Id, Sys>, _: &A) where A: Show {
 
             let mut counter = 0u;
 
-            for (entity, cmp2, cmp3, cmp4, cmp5) in entities_with_components!(entity_manager: without Cmp1 with Cmp2 with Cmp3 with Cmp4 with Cmp5) {
+            for (_, _, _, _, _) in entities_with_components!(entity_manager: without Cmp1 with Cmp2 with Cmp3 with Cmp4 with Cmp5) {
                 counter += 1;
             }
         }

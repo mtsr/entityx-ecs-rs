@@ -1,6 +1,6 @@
 #![macro_escape]
 
-use std::collections::{ BinaryHeap, Bitv, VecMap, HashMap };
+use std::collections::{ BinaryHeap, VecMap, HashMap };
 use std::collections::binary_heap::{ Iter };
 
 // TODO Consider using unsafe for transmuting Option
@@ -10,7 +10,6 @@ use std::collections::binary_heap::{ Iter };
 // TODO Add Component Copy-on-Write from Template
 
 use std::iter::{ Iterator };
-use std::intrinsics::TypeId;
 use std::uint;
 use std::fmt::{ Show, Formatter, Error };
 
@@ -79,11 +78,38 @@ impl<Id> Show for Entity<Id> {
 
 pub type ComponentId = u64;
 
-pub enum ComponentDatastructure {
-    // TODO consider adding Vec<C> (without Option) for C: Default
-    // Vec,
-    VecMap,
-    HashMap,
+struct ComponentData<'a, Component: 'static> {
+    list: Box<ComponentList<'a, Component> + 'static>
+}
+
+pub trait ComponentList<'a, Component> {
+    fn contains_key(&self, &uint) -> bool;
+    fn get(&self, &uint) -> Option<&Component>;
+    fn get_mut(&mut self, &uint) -> Option<&mut Component>;
+    fn insert(&mut self, uint, Component);
+    // TODO figure out return type
+    // fn iter(&'a self) -> Iterator<(uint, &'a Component)>;
+    // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)>;
+}
+
+impl<'a, Component> ComponentList<'a, Component> for VecMap<Component> {
+    fn contains_key(&self, index: &uint) -> bool { self.contains_key(index) }
+    fn get(&self, index: &uint) -> Option<&Component> { self.get(index) }
+    fn get_mut(&mut self, index: &uint) -> Option<&mut Component> { self.get_mut(index) }
+    fn insert(&mut self, index: uint, component: Component) { self.insert(index, component); }
+    // TODO figure out return type
+    // fn iter(&'a self) -> Iterator<(uint, &'a Component)> { self.iter() }
+    // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)> { self.iter_mut() }
+}
+
+impl<'a, Component> ComponentList<'a, Component> for HashMap<uint, Component> {
+    fn contains_key(&self, index: &uint) -> bool { self.contains_key(index) }
+    fn get(&self, index: &uint) -> Option<&Component> { self.get(index) }
+    fn get_mut(&mut self, index: &uint) -> Option<&mut Component> { self.get_mut(index) }
+    fn insert(&mut self, index: uint, component: Component) { self.insert(index, component); }
+    // TODO figure out return type
+    // fn iter(&'a self) -> Iterator<(uint, &'a Component)> { self.iter() }
+    // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)> { self.iter_mut() }
 }
 
 pub struct EntityManager<Id> {
@@ -93,16 +119,12 @@ pub struct EntityManager<Id> {
     free_entity_index_list: BinaryHeap<uint>,
 
     entity_versions: Vec<uint>,
-    entity_component_masks: Vec<Bitv>,
 
     // TODO replace with HashMap<TypeId, Any>
     // Where Any is Vec<Option<C>> VecMap<Option<C>> or HashMap<Option<C>>
     // so that it's possible to access component lists without <C>
     // TODO Add BTreeMap
-    component_lists: AnyMap,
-    component_datastructures: HashMap<ComponentId, ComponentDatastructure>,
-    component_index_counter: uint,
-    component_indices: HashMap<ComponentId, uint>,
+    component_data: AnyMap,
 }
 
 impl<'a, Id> EntityManager<Id> {
@@ -115,12 +137,7 @@ impl<'a, Id> EntityManager<Id> {
 
             entity_versions: Vec::from_elem(256, 0u),
 
-            component_lists: AnyMap::new(),
-            component_datastructures: HashMap::new(),
-
-            component_index_counter: 0,
-            entity_component_masks: Vec::with_capacity(256),
-            component_indices: HashMap::with_capacity(32),
+            component_data: AnyMap::new(),
         }
     }
 
@@ -148,7 +165,6 @@ impl<'a, Id> EntityManager<Id> {
     }
 
     pub fn create_entity(&mut self) -> Entity<Id> {
-        self.entity_component_masks.push(Bitv::from_elem(self.component_index_counter, false));
         Entity {
             id: self.create_id(),
             marker: self.marker,
@@ -158,7 +174,6 @@ impl<'a, Id> EntityManager<Id> {
     pub fn destroy_entity(&mut self, entity: Entity<Id>) {
         self.entity_versions[entity.index()] += 1;
         self.free_entity_index_list.push(entity.index());
-        self.entity_component_masks[entity.index()].clear();
     }
 
     pub fn is_valid(&self, entity: &Entity<Id>) -> bool {
@@ -167,33 +182,13 @@ impl<'a, Id> EntityManager<Id> {
     }
 
     // TODO look into moving datastructure type into type parameter
-    pub fn register_component<C: 'static>(&mut self, component_datastructure: ComponentDatastructure) {
-        match component_datastructure {
-            ComponentDatastructure::VecMap => {
-                if self.component_lists.contains::<VecMap<C>>() {
-                    panic!("Tried to register component twice");
-                }
-                let component_list: VecMap<C> = VecMap::new();
-                self.component_lists.insert::<VecMap<C>>(component_list);
-            },
-            ComponentDatastructure::HashMap => {
-                if self.component_lists.contains::<HashMap<uint, C>>() {
-                    panic!("Tried to register component twice");
-                }
-                let component_list: HashMap<uint, C> = HashMap::new();
-                self.component_lists.insert::<HashMap<uint, C>>(component_list);
-            },
-        }
-
-        self.component_datastructures.insert(TypeId::of::<C>().hash(), component_datastructure);
-
-        self.component_indices.insert(TypeId::of::<C>().hash(), self.component_index_counter);
-        self.component_index_counter += 1;
-        let length = self.component_index_counter;
-
-        for mut entity_component_mask in self.entity_component_masks.iter_mut() {
-            // dynamically grow bitv length, only needed if new component types can be registered after entities have been added
-            entity_component_mask.grow(length, false);
+    pub fn register_component<C: 'static>(&mut self, component_list: Box<ComponentList<'a, C> + 'static>) {
+        if let None = self.component_data.get::<ComponentData<C>>() {
+            self.component_data.insert::<ComponentData<C>>(ComponentData {
+                list: component_list,
+            });
+        } else {
+            panic!("Tried to register component twice");
         }
     }
 
@@ -201,31 +196,20 @@ impl<'a, Id> EntityManager<Id> {
     pub fn assign_component<C: 'static>(&mut self, entity: &Entity<Id>, component: C) {
         assert!(self.is_valid(entity));
 
-        match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
-            Some(&ComponentDatastructure::VecMap) => {
-                // TODO Consider replacing with unsafe
-                // let component_list: &mut VecMap<C> = unsafe { transmute(self.component_lists.get_mut::<VecMap<C>>()) };
-                let component_list = self.component_lists.get_mut::<VecMap<C>>().unwrap();
-                component_list.insert(entity.index(), component);
-            },
-            Some(&ComponentDatastructure::HashMap) => {
-                let component_list = self.component_lists.get_mut::<HashMap<uint, C>>().unwrap();
-                component_list.insert(entity.index(), component);
-            },
-            None => panic!("Tried to assign unregistered component"),
+        if let Some(mut component_data) = self.component_data.get_mut::<ComponentData<C>>() {
+            component_data.list.insert(entity.index(), component);
+        } else {
+            panic!("Tried to assign unregistered component");
         }
-        match self.component_indices.get(&TypeId::of::<C>().hash()) {
-            Some(index) => self.entity_component_masks[entity.index()].set(*index, true),
-            None => panic!("Tried to assign unregistered component"),
-        };
     }
 
     pub fn has_component<C: 'static>(&self, entity: &Entity<Id>) -> bool {
         assert!(self.is_valid(entity));
 
-        match self.component_indices.get(&TypeId::of::<C>().hash()) {
-            Some(index) => self.entity_component_masks[entity.index()][*index],
-            None => panic!("Tried to check for unregistered component"),
+        if let Some(component_data) = self.component_data.get::<ComponentData<C>>() {
+            component_data.list.contains_key(&entity.index())
+        } else {
+            panic!("Tried to check for unregistered component");
         }
     }
 
@@ -233,44 +217,20 @@ impl<'a, Id> EntityManager<Id> {
     pub fn get_component<C: 'static>(&'a self, entity: &Entity<Id>) -> Option<&C> {
         assert!(self.is_valid(entity));
 
-        if !self.has_component::<C>(entity) {
-            return None;
-        }
-
-        match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
-            Some(&ComponentDatastructure::VecMap) => {
-                // TODO unsafe unwrap here, because we know this entry exists
-                let component_list = self.component_lists.get::<VecMap<C>>().unwrap();
-                component_list.get(&entity.index())
-            },
-            Some(&ComponentDatastructure::HashMap) => {
-                // TODO unsafe unwrap here, because we know this entry exists
-                let component_list = self.component_lists.get::<HashMap<uint, C>>().unwrap();
-                component_list.get(&entity.index())
-            },
-            None => panic!("Tried to assign unregistered component"),
+        if let Some(component_data) = self.component_data.get::<ComponentData<C>>() {
+            component_data.list.get(&entity.index())
+        } else {
+            panic!("Tried to get unregistered component");
         }
     }
 
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<Id>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
 
-        if !self.has_component::<C>(entity) {
-            return None;
-        }
-
-        match self.component_datastructures.get(&TypeId::of::<C>().hash()) {
-            Some(&ComponentDatastructure::VecMap) => {
-                // TODO unsafe unwrap here, because we know this entry exists
-                let component_list = self.component_lists.get_mut::<VecMap<C>>().unwrap();
-                component_list.get_mut(&entity.index())
-            },
-            Some(&ComponentDatastructure::HashMap) => {
-                // TODO unsafe unwrap here, because we know this entry exists
-                let component_list = self.component_lists.get_mut::<HashMap<uint, C>>().unwrap();
-                component_list.get_mut(&entity.index())
-            },
-            None => panic!("Tried to assign unregistered component"),
+        if let Some(mut component_data) = self.component_data.get_mut::<ComponentData<C>>() {
+            component_data.list.get_mut(&entity.index())
+        } else {
+            panic!("Tried to get unregistered component");
         }
     }
 
@@ -330,7 +290,7 @@ impl<'a, Id> Iterator<Entity<Id>> for EntityIterator<'a, Id> {
             return result;
         }
 
-        None
+        None::<Entity<Id>>
     }
 }
 
@@ -376,9 +336,8 @@ macro_rules! entities_with_components(
 
 #[cfg(test)]
 mod tests {
-    use entity::{ EntityManager, ComponentDatastructure };
+    use entity::{ EntityManager };
     use std::collections::{ VecMap, HashMap };
-    use std::intrinsics::TypeId;
     use tup_append::TupAppend;
 
     #[test]
@@ -426,17 +385,17 @@ mod tests {
         // test different datastructures
         #[deriving(PartialEq, Show)]
         struct UnitComponent;
-        entity_manager.register_component::<UnitComponent>(ComponentDatastructure::VecMap);
+        entity_manager.register_component::<UnitComponent>(box VecMap::new());
 
         #[deriving(PartialEq, Show)]
         struct TupleComponent(int);
-        entity_manager.register_component::<TupleComponent>(ComponentDatastructure::HashMap);
+        entity_manager.register_component::<TupleComponent>(box HashMap::new());
 
         #[deriving(PartialEq, Show)]
         struct Component {
             field: int,
         }
-        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
+        entity_manager.register_component::<Component>(box VecMap::new());
 
         let entity = entity_manager.create_entity();
 
@@ -476,8 +435,8 @@ mod tests {
         let mut entity_manager: EntityManager<World1> = EntityManager::new();
 
         struct Component;
-        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
-        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
+        entity_manager.register_component::<Component>(box VecMap::new());
+        entity_manager.register_component::<Component>(box VecMap::new());
     }
 
     #[test]
@@ -488,12 +447,12 @@ mod tests {
         #[deriving(PartialEq,Show)]
         struct Component;
 
-        entity_manager.register_component::<Component>(ComponentDatastructure::VecMap);
+        entity_manager.register_component::<Component>(box VecMap::new());
 
         let entity = entity_manager.create_entity();
         entity_manager.assign_component::<Component>(&entity, Component);
 
-        for (entity, component) in entities_with_components!(entity_manager: with Component) {
+        for (_, component) in entities_with_components!(entity_manager: with Component) {
             assert_eq!(component, &Component);
         }
     }
