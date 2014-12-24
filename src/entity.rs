@@ -172,6 +172,7 @@ impl<'a, Id> EntityManager<Id> {
     }
 
     pub fn destroy_entity(&mut self, entity: Entity<Id>) {
+        // TODO clear/invalidate component data
         self.entity_versions[entity.index()] += 1;
         self.free_entity_index_list.push(entity.index());
     }
