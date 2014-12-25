@@ -247,7 +247,7 @@ impl<'a, Id> EntityManager<Id> {
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<Id>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
 
-        // TODO get rid of double get_component_date + get_component_data_mut
+        // TODO get rid of double get_component_data + get_component_data_mut
         if !self.has_component::<C>(entity) {
             return None;
         }
@@ -270,6 +270,14 @@ impl<'a, Id> EntityManager<Id> {
         } else {
             panic!("Tried to get unregistered component");
         }
+    }
+
+    pub fn get_entity_component_mask(&self, entity: &Entity<Id>) -> &Bitv {
+        &self.entity_component_masks[entity.index()]
+    }
+
+    pub fn get_components_length(&self) -> uint {
+        self.next_component_index
     }
 
     pub fn entities(&self) -> EntityIterator<Id> {
