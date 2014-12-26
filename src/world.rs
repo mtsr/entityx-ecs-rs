@@ -1,26 +1,36 @@
+#![macro_escape]
+
 use std::collections::{ Bitv };
 
 use entity::{ EntityManager, Entity, EntityIterator };
-use entity::{ ComponentList, ComponentData };
+use component::{ ComponentManager, ComponentList, ComponentData };
 use system::{ SystemManager, System };
+
+// TODO Add Entity Templates
 
 pub struct World<WorldId> {
     entity_manager: EntityManager<WorldId>,
     system_manager: SystemManager<WorldId>,
+    component_manager: ComponentManager<WorldId>,
 }
 
 impl<'a, WorldId> World<WorldId> {
     pub fn new() -> World<WorldId> {
+        let initial_capacity = 256u;
+
         World {
-            entity_manager: EntityManager::new(),
+            entity_manager: EntityManager::new(initial_capacity),
             system_manager: SystemManager::new(),
+            component_manager: ComponentManager::new(initial_capacity),
         }
     }
 
     // *** EntityManager ***
 
     pub fn create_entity(&mut self) -> Entity<WorldId> {
-        self.entity_manager.create_entity()
+        let entity = self.entity_manager.create_entity();
+        self.component_manager.entity_created(&entity);
+        entity
     }
 
     pub fn destroy_entity(&mut self, entity: Entity<WorldId>) {
@@ -38,39 +48,47 @@ impl<'a, WorldId> World<WorldId> {
     // *** ComponentManager ***
 
     pub fn register_component<C: 'static>(&mut self, component_list: Box<ComponentList<'a, C> + 'static>) {
-        self.entity_manager.register_component(component_list)
+        self.component_manager.register_component(component_list)
     }
 
     pub fn assign_component<C: 'static>(&mut self, entity: &Entity<WorldId>, component: C) {
-        self.entity_manager.assign_component(entity, component)
+        assert!(self.is_valid(entity));
+
+        self.component_manager.assign_component(entity, component)
     }
 
     pub fn has_component<C: 'static>(&self, entity: &Entity<WorldId>) -> bool {
-        self.entity_manager.has_component::<C>(entity)
+        assert!(self.is_valid(entity));
+
+        self.component_manager.has_component::<C>(entity)
     }
 
     pub fn get_component<C: 'static>(&'a self, entity: &Entity<WorldId>) -> Option<&C> {
-        self.entity_manager.get_component::<C>(entity)
+        assert!(self.is_valid(entity));
+
+        self.component_manager.get_component::<C>(entity)
     }
 
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<WorldId>) -> Option<&mut C> {
-        self.entity_manager.get_component_mut::<C>(entity)
+        assert!(self.is_valid(entity));
+
+        self.component_manager.get_component_mut::<C>(entity)
     }
 
     pub fn get_component_data<C: 'static>(&'a self) -> &ComponentData<C> {
-        self.entity_manager.get_component_data::<C>()
+        self.component_manager.get_component_data::<C>()
     }
 
     pub fn get_component_data_mut<C: 'static>(&'a mut self) -> &mut ComponentData<C> {
-        self.entity_manager.get_component_data_mut::<C>()
+        self.component_manager.get_component_data_mut::<C>()
     }
 
     pub fn get_entity_component_mask(&self, entity: &Entity<WorldId>) -> &Bitv {
-        self.entity_manager.get_entity_component_mask(entity)
+        self.component_manager.get_entity_component_mask(entity)
     }
 
     pub fn get_components_length(&self) -> uint {
-        self.entity_manager.get_components_length()
+        self.component_manager.get_components_length()
     }
 
     // *** SystemManager ***
@@ -80,6 +98,51 @@ impl<'a, WorldId> World<WorldId> {
     }
 
     pub fn update_system<A, S>(&mut self, args: &A) where S: System<WorldId, S> + 'static {
-        self.system_manager.update::<A,S>(&mut self.entity_manager, args)
+        self.system_manager.update::<A,S>(&mut self.entity_manager, &mut self.component_manager, args)
     }
+}
+
+// TODO allow with Player(1) style queries.
+
+#[macro_export]
+macro_rules! entities_with_components_inner(
+    ( $entity_manager:ident, $component_manager:ident, $already:expr : ) => ( $already );
+    ( $entity_manager:ident, $component_manager:ident, $already:expr : with $ty:path $( $kinds:ident $types:path )* ) => (
+        entities_with_components_inner!( $entity_manager, $component_manager, $already.and_then(|tuple| {
+            let comp = $component_manager.get_component::<$ty>(&tuple.0);
+            match comp {
+                Some(obj) => Some( tuple.tup_append(obj) ),
+                None => None
+            }
+        } ) : $( $kinds $types )* )
+    );
+    ( $entity_manager:ident, $component_manager:ident, $already:expr : without $ty:path $( $kinds:ident $types:path )* ) => (
+        entities_with_components_inner!( $entity_manager, $component_manager, $already.and_then(|tuple|
+            if let Some(_) = $component_manager.get_component::<$ty>(&tuple.0) {
+                None
+            } else {
+                Some(tuple)
+            }
+        ) : $( $kinds $types )* )
+    );
+    ( $entity_manager:ident, $component_manager:ident, $already:expr : option $ty:path $( $kinds:ident $types:path )* ) => (
+        entities_with_components_inner!( $entity_manager, $component_manager, $already.map(|tuple| {
+            let comp = $component_manager.get_component::<$ty>(&tuple.0);
+            tuple.tup_append( comp )
+        } ) : $( $kinds $types )* )
+    );
+);
+
+#[macro_export]
+macro_rules! entities_with_components(
+    ( $entity_manager:ident, $component_manager:ident : $( $kinds:ident $types:path )* ) => (
+        $entity_manager.entities().filter_map(|entity|
+            entities_with_components_inner!($entity_manager, $component_manager, Some((entity,)): $( $kinds $types )* )
+        )
+    );
+);
+
+
+#[cfg(test)]
+mod tests {
 }

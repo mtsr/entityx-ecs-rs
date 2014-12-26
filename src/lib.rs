@@ -3,9 +3,10 @@ extern crate anymap;
 extern crate test;
 
 pub use world::World;
-pub use entity::{ EntityManager, Entity, ComponentList, ComponentData };
+pub use entity::{ EntityManager, Entity };
 pub use system::{ System, SystemManager };
 pub use control::{ Control };
+pub use component::{ ComponentManager, ComponentList, ComponentData };
 
 pub use tup_append::TupAppend;
 
@@ -14,10 +15,10 @@ mod tup_append;
 mod system;
 mod entity;
 mod control;
+mod component;
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Show;
     use std::rand;
     use std::collections::{ Bitv, HashMap, VecMap };
 
@@ -25,6 +26,7 @@ mod tests {
         World,
         EntityManager,
         Entity,
+        ComponentManager,
         Control,
         System,
         TupAppend, // required for components macro
@@ -76,6 +78,7 @@ mod tests {
     #[bench]
     fn bench_with_capture(bencher: &mut Bencher) {
         let mut world: World<WorldId1> = World::new();
+
         world.register_system(Sys2);
 
         world.register_component::<Cmp1>(box VecMap::new());
@@ -128,11 +131,11 @@ mod tests {
     struct Sys1;
 
     impl<WorldId> System<WorldId, Sys1> for Sys1 {
-        fn update<A>(&mut self, world: &EntityManager<WorldId>, _: &mut Control<WorldId, Sys1>, _: &A) {
+        fn update<A>(&mut self, entity_manager: &EntityManager<WorldId>, component_manager: &ComponentManager<WorldId>, _: &mut Control<WorldId, Sys1>, _: &A) {
 
             let mut counter = 0u;
 
-            for (_, _, _, _, _) in entities_with_components!(world: without Cmp1 with Cmp2 with Cmp3 with Cmp4 with Cmp5) {
+            for (_, _, _, _, _) in entities_with_components!(entity_manager, component_manager: without Cmp1 with Cmp2 with Cmp3 with Cmp4 with Cmp5) {
                 counter += 1;
             }
         }
@@ -141,18 +144,20 @@ mod tests {
     struct Sys2;
 
     impl<WorldId> System<WorldId, Sys2> for Sys2 {
-        fn update<A>(&mut self, world: &EntityManager<WorldId>, _: &mut Control<WorldId, Sys2>, _: &A) {
+        fn update<A>(&mut self, entity_manager: &EntityManager<WorldId>, component_manager: &ComponentManager<WorldId>, _: &mut Control<WorldId, Sys2>, _: &A) {
 
             let mut counter = 0u;
 
-            let component_data = (world.get_component_data::<Cmp1>(),)
-            .tup_append(world.get_component_data::<Cmp2>())
-            .tup_append(world.get_component_data::<Cmp3>())
-            .tup_append(world.get_component_data::<Cmp4>())
-            .tup_append(world.get_component_data::<Cmp5>());
-            let mut with_mask = Bitv::from_elem(world.get_components_length(), false);
-            let mut without_mask = Bitv::from_elem(world.get_components_length(), false);
-            for tuple in world.entities().filter(|entity| {
+            let component_data = (component_manager.get_component_data::<Cmp1>(),)
+            .tup_append(component_manager.get_component_data::<Cmp2>())
+            .tup_append(component_manager.get_component_data::<Cmp3>())
+            .tup_append(component_manager.get_component_data::<Cmp4>())
+            .tup_append(component_manager.get_component_data::<Cmp5>());
+
+            let mut with_mask = Bitv::from_elem(component_manager.get_components_length(), false);
+            let mut without_mask = Bitv::from_elem(component_manager.get_components_length(), false);
+
+            for tuple in entity_manager.entities().filter(|entity| {
                 with_mask.set(component_data.1.index, true);
                 with_mask.set(component_data.2.index, true);
                 with_mask.set(component_data.3.index, true);
@@ -160,7 +165,7 @@ mod tests {
 
                 without_mask.set(component_data.0.index, true);
 
-                let component_mask = world.get_entity_component_mask(entity);
+                let component_mask = component_manager.get_entity_component_mask(entity);
 
                 if with_mask.intersect(component_mask) || without_mask.difference(component_mask) {
                     false
