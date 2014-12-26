@@ -91,6 +91,7 @@ pub trait ComponentList<'a, Component> {
     fn get(&self, &uint) -> Option<&Component>;
     fn get_mut(&mut self, &uint) -> Option<&mut Component>;
     fn insert(&mut self, uint, Component);
+    fn remove(&mut self, key: &uint) -> Option<Component>;
     // TODO figure out return type
     // fn iter(&'a self) -> Iterator<(uint, &'a Component)>;
     // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)>;
@@ -101,6 +102,7 @@ impl<'a, Component> ComponentList<'a, Component> for VecMap<Component> {
     fn get(&self, index: &uint) -> Option<&Component> { self.get(index) }
     fn get_mut(&mut self, index: &uint) -> Option<&mut Component> { self.get_mut(index) }
     fn insert(&mut self, index: uint, component: Component) { self.insert(index, component); }
+    fn remove(&mut self, key: &uint) -> Option<Component> { self.remove(key) }
     // TODO figure out return type
     // fn iter(&'a self) -> Iterator<(uint, &'a Component)> { self.iter() }
     // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)> { self.iter_mut() }
@@ -111,6 +113,7 @@ impl<'a, Component> ComponentList<'a, Component> for HashMap<uint, Component> {
     fn get(&self, index: &uint) -> Option<&Component> { self.get(index) }
     fn get_mut(&mut self, index: &uint) -> Option<&mut Component> { self.get_mut(index) }
     fn insert(&mut self, index: uint, component: Component) { self.insert(index, component); }
+    fn remove(&mut self, key: &uint) -> Option<Component> { self.remove(key) }
     // TODO figure out return type
     // fn iter(&'a self) -> Iterator<(uint, &'a Component)> { self.iter() }
     // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)> { self.iter_mut() }
