@@ -108,6 +108,16 @@ impl<'a, WorldId> ComponentManager<WorldId> {
         self.entity_component_masks[entity.index()].set(index, true);
     }
 
+    pub fn remove_component<C: 'static>(&mut self, entity: &Entity<WorldId>) {
+        let index = {
+            let component_data = self.get_component_data_mut::<C>();
+            component_data.list.remove(&entity.index());
+            component_data.index
+        };
+
+        self.entity_component_masks[entity.index()].set(index, false);
+    }
+
     pub fn has_component<C: 'static>(&self, entity: &Entity<WorldId>) -> bool {
         let component_data = self.get_component_data::<C>();
         self.entity_component_masks[entity.index()].get(component_data.index).unwrap()

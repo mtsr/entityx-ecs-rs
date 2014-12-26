@@ -12,9 +12,10 @@ pub struct World<WorldId> {
     entity_manager: EntityManager<WorldId>,
     system_manager: SystemManager<WorldId>,
     component_manager: ComponentManager<WorldId>,
+    component_destroyers: Vec<Box<for<'b> Fn(&'b Entity<WorldId>, &'b mut ComponentManager<WorldId>) + 'static>>,
 }
 
-impl<'a, WorldId> World<WorldId> {
+impl<WorldId> World<WorldId> {
     pub fn new() -> World<WorldId> {
         let initial_capacity = 256u;
 
@@ -22,6 +23,7 @@ impl<'a, WorldId> World<WorldId> {
             entity_manager: EntityManager::new(initial_capacity),
             system_manager: SystemManager::new(),
             component_manager: ComponentManager::new(initial_capacity),
+            component_destroyers: Vec::new(),
         }
     }
 
@@ -34,6 +36,10 @@ impl<'a, WorldId> World<WorldId> {
     }
 
     pub fn destroy_entity(&mut self, entity: Entity<WorldId>) {
+        let mut destroyers = self.component_destroyers.iter();
+        while let Some(destroyer) = destroyers.next() {
+            destroyer.call((&entity, &mut self.component_manager));
+        }
         self.entity_manager.destroy_entity(entity)
     }
 
@@ -47,7 +53,14 @@ impl<'a, WorldId> World<WorldId> {
 
     // *** ComponentManager ***
 
-    pub fn register_component<C: 'static>(&mut self, component_list: Box<ComponentList<'a, C> + 'static>) {
+    pub fn register_component<C: 'static>(&mut self, component_list: Box<ComponentList<C> + 'static>) {
+        // TODO benchmark speed, since remove_component could be slow
+        // since it has to do a get_component_data per entity
+        // As component removals are batched after a system update it
+        // should be possible to improve this
+        self.component_destroyers.push(box |entity: &Entity<WorldId>, component_manager: &mut ComponentManager<WorldId>| {
+            &component_manager.remove_component::<C>(entity);
+        });
         self.component_manager.register_component(component_list)
     }
 
@@ -63,23 +76,23 @@ impl<'a, WorldId> World<WorldId> {
         self.component_manager.has_component::<C>(entity)
     }
 
-    pub fn get_component<C: 'static>(&'a self, entity: &Entity<WorldId>) -> Option<&C> {
+    pub fn get_component<C: 'static>(&self, entity: &Entity<WorldId>) -> Option<&C> {
         assert!(self.is_valid(entity));
 
         self.component_manager.get_component::<C>(entity)
     }
 
-    pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<WorldId>) -> Option<&mut C> {
+    pub fn get_component_mut<C: 'static>(&mut self, entity: &Entity<WorldId>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
 
         self.component_manager.get_component_mut::<C>(entity)
     }
 
-    pub fn get_component_data<C: 'static>(&'a self) -> &ComponentData<C> {
+    pub fn get_component_data<C: 'static>(&self) -> &ComponentData<C> {
         self.component_manager.get_component_data::<C>()
     }
 
-    pub fn get_component_data_mut<C: 'static>(&'a mut self) -> &mut ComponentData<C> {
+    pub fn get_component_data_mut<C: 'static>(&mut self) -> &mut ComponentData<C> {
         self.component_manager.get_component_data_mut::<C>()
     }
 
@@ -145,4 +158,37 @@ macro_rules! entities_with_components(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::{ VecMap };
+    use super::{ World };
+
+    struct WorldId1;
+    struct Cmp1;
+
+    #[test]
+    fn create_entity() {
+        let mut world:World<WorldId1> = World::new();
+
+        let entity = world.create_entity();
+    }
+
+    #[test]
+    fn destroy_entity() {
+        let mut world:World<WorldId1> = World::new();
+
+        let entity = world.create_entity();
+        world.destroy_entity(entity);
+    }
+
+    #[test]
+    fn destroy_entity_with_components() {
+        let mut world:World<WorldId1> = World::new();
+
+        world.register_component::<Cmp1>(box VecMap::new());
+
+        let entity = world.create_entity();
+
+        world.assign_component(&entity, Cmp1);
+
+        world.destroy_entity(entity);
+    }
 }
