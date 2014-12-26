@@ -123,24 +123,16 @@ impl<'a, WorldId> ComponentManager<WorldId> {
         self.entity_component_masks[entity.index()].get(component_data.index).unwrap()
     }
 
-    // TODO dedup get_component and get_component_mut
     pub fn get_component<C: 'static>(&'a self, entity: &Entity<WorldId>) -> Option<&C> {
+        // Assumes components for deleted entities have been removed
+        // If this ever changes, readd has_component()
         let component_data = self.get_component_data::<C>();
-
-        let has_component = self.entity_component_masks[entity.index()].get(component_data.index).unwrap();
-        if !has_component {
-            return None;
-        }
-
         component_data.list.get(&entity.index())
     }
 
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<WorldId>) -> Option<&mut C> {
-        // TODO get rid of double get_component_data + get_component_data_mut
-        if !self.has_component::<C>(entity) {
-            return None;
-        }
-
+        // Assumes components for deleted entities have been removed
+        // If this ever changes, readd has_component()
         let component_data = self.get_component_data_mut::<C>();
         component_data.list.get_mut(&entity.index())
     }
