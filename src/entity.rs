@@ -237,7 +237,7 @@ impl<'a, Id> EntityManager<Id> {
         let component_data = self.get_component_data::<C>();
 
         let has_component = self.entity_component_masks[entity.index()].get(component_data.index).unwrap();
-        if has_component {
+        if !has_component {
             return None;
         }
 
