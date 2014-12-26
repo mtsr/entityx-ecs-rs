@@ -33,12 +33,12 @@ impl PartialEq for EntityId {
     }
 }
 
-pub struct Entity<Id> {
+pub struct Entity<WorldId> {
     id: EntityId,
-    marker: marker::InvariantType<Id>,
+    marker: marker::InvariantType<WorldId>,
 }
 
-impl<'a, Id> Entity<Id> {
+impl<'a, WorldId> Entity<WorldId> {
     #[inline]
     pub fn index(&self) -> uint {
         self.id.index
@@ -55,7 +55,7 @@ impl<'a, Id> Entity<Id> {
     }
 }
 
-impl<Id> Clone for Entity<Id> {
+impl<WorldId> Clone for Entity<WorldId> {
     fn clone(&self) -> Self {
         Entity {
             id: self.id.clone(),
@@ -64,14 +64,14 @@ impl<Id> Clone for Entity<Id> {
     }
 }
 
-impl<Id> Show for Entity<Id> {
+impl<WorldId> Show for Entity<WorldId> {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
         self.id.fmt(formatter)
     }
 }
 
-impl<Id> PartialEq for Entity<Id> {
-    fn eq(&self, other: &Entity<Id>) -> bool {
+impl<WorldId> PartialEq for Entity<WorldId> {
+    fn eq(&self, other: &Entity<WorldId>) -> bool {
         self.id() == other.id()
     }
 }
@@ -119,8 +119,8 @@ impl<'a, Component> ComponentList<'a, Component> for HashMap<uint, Component> {
     // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)> { self.iter_mut() }
 }
 
-pub struct EntityManager<Id> {
-    marker: marker::InvariantType<Id>,
+pub struct EntityManager<WorldId> {
+    marker: marker::InvariantType<WorldId>,
 
     next_entity_index: uint,
     free_entity_index_list: BinaryHeap<uint>,
@@ -132,8 +132,8 @@ pub struct EntityManager<Id> {
     component_data: AnyMap,
 }
 
-impl<'a, Id> EntityManager<Id> {
-    pub fn new() -> EntityManager<Id> {
+impl<'a, WorldId> EntityManager<WorldId> {
+    pub fn new() -> EntityManager<WorldId> {
         let initial_capacity = 256u;
 
         EntityManager {
@@ -173,7 +173,7 @@ impl<'a, Id> EntityManager<Id> {
         }
     }
 
-    pub fn create_entity(&mut self) -> Entity<Id> {
+    pub fn create_entity(&mut self) -> Entity<WorldId> {
         self.entity_component_masks.push(Bitv::from_elem(self.next_component_index, false));
         Entity {
             id: self.create_id(),
@@ -181,19 +181,18 @@ impl<'a, Id> EntityManager<Id> {
         }
     }
 
-    pub fn destroy_entity(&mut self, entity: Entity<Id>) {
+    pub fn destroy_entity(&mut self, entity: Entity<WorldId>) {
         // TODO clear/invalidate component data
         self.entity_versions[entity.index()] += 1;
         self.entity_component_masks[entity.index()].clear();
         self.free_entity_index_list.push(entity.index());
     }
 
-    pub fn is_valid(&self, entity: &Entity<Id>) -> bool {
+    pub fn is_valid(&self, entity: &Entity<WorldId>) -> bool {
         entity.index() < self.next_entity_index
         && entity.version() == self.entity_versions[entity.index()]
     }
 
-    // TODO look into moving datastructure type into type parameter
     pub fn register_component<C: 'static>(&mut self, component_list: Box<ComponentList<'a, C> + 'static>) {
         match self.component_data.get::<ComponentData<C>>() {
             None => {
@@ -214,7 +213,7 @@ impl<'a, Id> EntityManager<Id> {
     }
 
     /// Add or replace component on entity
-    pub fn assign_component<C: 'static>(&mut self, entity: &Entity<Id>, component: C) {
+    pub fn assign_component<C: 'static>(&mut self, entity: &Entity<WorldId>, component: C) {
         assert!(self.is_valid(entity));
 
         let index = {
@@ -226,7 +225,7 @@ impl<'a, Id> EntityManager<Id> {
         self.entity_component_masks[entity.index()].set(index, true);
     }
 
-    pub fn has_component<C: 'static>(&self, entity: &Entity<Id>) -> bool {
+    pub fn has_component<C: 'static>(&self, entity: &Entity<WorldId>) -> bool {
         assert!(self.is_valid(entity));
 
         let component_data = self.get_component_data::<C>();
@@ -234,7 +233,7 @@ impl<'a, Id> EntityManager<Id> {
     }
 
     // TODO dedup get_component and get_component_mut
-    pub fn get_component<C: 'static>(&'a self, entity: &Entity<Id>) -> Option<&C> {
+    pub fn get_component<C: 'static>(&'a self, entity: &Entity<WorldId>) -> Option<&C> {
         assert!(self.is_valid(entity));
 
         let component_data = self.get_component_data::<C>();
@@ -247,7 +246,7 @@ impl<'a, Id> EntityManager<Id> {
         component_data.list.get(&entity.index())
     }
 
-    pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<Id>) -> Option<&mut C> {
+    pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<WorldId>) -> Option<&mut C> {
         assert!(self.is_valid(entity));
 
         // TODO get rid of double get_component_data + get_component_data_mut
@@ -275,7 +274,7 @@ impl<'a, Id> EntityManager<Id> {
         }
     }
 
-    pub fn get_entity_component_mask(&self, entity: &Entity<Id>) -> &Bitv {
+    pub fn get_entity_component_mask(&self, entity: &Entity<WorldId>) -> &Bitv {
         &self.entity_component_masks[entity.index()]
     }
 
@@ -283,7 +282,7 @@ impl<'a, Id> EntityManager<Id> {
         self.next_component_index
     }
 
-    pub fn entities(&self) -> EntityIterator<Id> {
+    pub fn entities(&self) -> EntityIterator<WorldId> {
         EntityIterator {
             entity_manager: self,
             last_entity_index: self.next_entity_index - 1, // last valid entity index
@@ -293,21 +292,15 @@ impl<'a, Id> EntityManager<Id> {
     }
 }
 
-impl<Id> PartialEq for EntityManager<Id> {
-    fn eq(&self, other: &EntityManager<Id>) -> bool {
-        self == other
-    }
-}
-
-pub struct EntityIterator<'a, Id: 'a> {
-    entity_manager: &'a EntityManager<Id>,
+pub struct EntityIterator<'a, WorldId: 'a> {
+    entity_manager: &'a EntityManager<WorldId>,
     last_entity_index: uint,
     index: uint,
     free_entity_index_list: Iter<'a, uint>,
 }
 
-impl<'a, Id> Iterator<Entity<Id>> for EntityIterator<'a, Id> {
-    fn next(&mut self) -> Option<Entity<Id>> {
+impl<'a, WorldId> Iterator<Entity<WorldId>> for EntityIterator<'a, WorldId> {
+    fn next(&mut self) -> Option<Entity<WorldId>> {
         // for all valid entity indexes
         while self.index <= self.last_entity_index {
             let mut free_entity_index = -1;
@@ -339,7 +332,7 @@ impl<'a, Id> Iterator<Entity<Id>> for EntityIterator<'a, Id> {
             return result;
         }
 
-        None::<Entity<Id>>
+        None::<Entity<WorldId>>
     }
 }
 
@@ -391,8 +384,8 @@ mod tests {
 
     #[test]
     fn created_entity_is_valid() {
-        struct World1;
-        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+        struct WorldId1;
+        let mut entity_manager: EntityManager<WorldId1> = EntityManager::new();
 
         let entity = entity_manager.create_entity();
         assert!(entity_manager.is_valid(&entity));
@@ -400,8 +393,8 @@ mod tests {
 
     #[test]
     fn deleted_entity_is_invalid() {
-        struct World1;
-        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+        struct WorldId1;
+        let mut entity_manager: EntityManager<WorldId1> = EntityManager::new();
 
         let entity1 = entity_manager.create_entity();
         let entity1_clone = entity1.clone();
@@ -413,8 +406,8 @@ mod tests {
 
     #[test]
     fn create_reuses_index() {
-        struct World1;
-        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+        struct WorldId1;
+        let mut entity_manager: EntityManager<WorldId1> = EntityManager::new();
 
         let entity1 = entity_manager.create_entity();
         let entity1_clone = entity1.clone();
@@ -428,8 +421,8 @@ mod tests {
 
     #[test]
     fn components() {
-        struct World1;
-        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+        struct WorldId1;
+        let mut entity_manager: EntityManager<WorldId1> = EntityManager::new();
 
         // test different datastructures
         #[deriving(PartialEq, Show)]
@@ -480,8 +473,8 @@ mod tests {
     #[test]
     #[should_fail]
     fn register_component_twice() {
-        struct World1;
-        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+        struct WorldId1;
+        let mut entity_manager: EntityManager<WorldId1> = EntityManager::new();
 
         struct Component;
         entity_manager.register_component::<Component>(box VecMap::new());
@@ -490,8 +483,8 @@ mod tests {
 
     #[test]
     fn macro() {
-        struct World1;
-        let mut entity_manager: EntityManager<World1> = EntityManager::new();
+        struct WorldId1;
+        let mut entity_manager: EntityManager<WorldId1> = EntityManager::new();
 
         #[deriving(PartialEq,Show)]
         struct Component;

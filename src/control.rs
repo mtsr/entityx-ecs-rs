@@ -1,33 +1,33 @@
 use entity::{ EntityManager, Entity };
 
-pub trait EntityBuilder<Id, S>: 'static {
-    fn build(&mut self, &mut EntityManager<Id>, &mut S, Entity<Id>);
+pub trait EntityBuilder<WorldId, S>: 'static {
+    fn build(&mut self, &mut EntityManager<WorldId>, &mut S, Entity<WorldId>);
 }
 
-impl<Id, S> EntityBuilder<Id, S> for |&mut EntityManager<Id>, &mut S, Entity<Id>|: 'static {
-    fn build(&mut self, c: &mut EntityManager<Id>, s: &mut S, e: Entity<Id>) {
+impl<WorldId, S> EntityBuilder<WorldId, S> for |&mut EntityManager<WorldId>, &mut S, Entity<WorldId>|: 'static {
+    fn build(&mut self, c: &mut EntityManager<WorldId>, s: &mut S, e: Entity<WorldId>) {
         (*self)(c, s, e);
     }
 }
 
-pub trait EntityModifier<Id, S>: 'static {
-    fn modify(&mut self, &mut EntityManager<Id>, &mut S, Entity<Id>);
+pub trait EntityModifier<WorldId, S>: 'static {
+    fn modify(&mut self, &mut EntityManager<WorldId>, &mut S, Entity<WorldId>);
 }
 
-impl<Id, S> EntityModifier<Id, S> for |&mut EntityManager<Id>, &mut S, Entity<Id>|: 'static {
-    fn modify(&mut self, c: &mut EntityManager<Id>, s: &mut S, e: Entity<Id>) {
+impl<WorldId, S> EntityModifier<WorldId, S> for |&mut EntityManager<WorldId>, &mut S, Entity<WorldId>|: 'static {
+    fn modify(&mut self, c: &mut EntityManager<WorldId>, s: &mut S, e: Entity<WorldId>) {
         (*self)(c, s, e);
     }
 }
 
-pub struct Control<'a, Id, S> {
-    builders: Vec<Box<EntityBuilder<Id, S> + 'static>>,
-    destroyed: Vec<Entity<Id>>,
-    modifiers: Vec<(Entity<Id>, Box<EntityModifier<Id, S> + 'static>)>,
+pub struct Control<'a, WorldId, S> {
+    builders: Vec<Box<EntityBuilder<WorldId, S> + 'static>>,
+    destroyed: Vec<Entity<WorldId>>,
+    modifiers: Vec<(Entity<WorldId>, Box<EntityModifier<WorldId, S> + 'static>)>,
 }
 
-impl<'a, Id, S> Control<'a, Id, S> {
-    pub fn new() -> Control<'a, Id, S> {
+impl<'a, WorldId, S> Control<'a, WorldId, S> {
+    pub fn new() -> Control<'a, WorldId, S> {
         Control {
             builders: Vec::new(),
             destroyed: Vec::new(),
@@ -35,19 +35,19 @@ impl<'a, Id, S> Control<'a, Id, S> {
         }
     }
 
-    pub fn build(&mut self, builder: Box<EntityBuilder<Id, S> + 'static>) {
+    pub fn build(&mut self, builder: Box<EntityBuilder<WorldId, S> + 'static>) {
         self.builders.push(builder);
     }
 
-    pub fn destroy(&mut self, entity: Entity<Id>) {
+    pub fn destroy(&mut self, entity: Entity<WorldId>) {
         self.destroyed.push(entity);
     }
 
-    pub fn modify(&mut self, entity: Entity<Id>, modifier: Box<EntityModifier<Id, S> + 'static>) {
+    pub fn modify(&mut self, entity: Entity<WorldId>, modifier: Box<EntityModifier<WorldId, S> + 'static>) {
         self.modifiers.push((entity, modifier));
     }
 
-    pub fn apply(self, entity_manager: &mut EntityManager<Id>, system: &mut S) {
+    pub fn apply(self, entity_manager: &mut EntityManager<WorldId>, system: &mut S) {
         let mut entity_manager = entity_manager;
         for mut builder in self.builders.into_iter() {
             let entity = entity_manager.create_entity();
