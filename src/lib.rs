@@ -19,7 +19,7 @@ mod component;
 
 #[cfg(test)]
 mod tests {
-    use std::rand;
+    use std::rand::{ Rng, XorShiftRng };
     use std::collections::{ Bitv, HashMap, VecMap };
 
     use super::{
@@ -40,7 +40,9 @@ mod tests {
     }
 
     #[bench]
-    fn bench_with_macro(bencher: &mut Bencher) {
+    fn bench_iterate_over_100k_entities_with_5_components_with_macro(bencher: &mut Bencher) {
+        let mut rng = XorShiftRng::new_unseeded();
+
         let mut world: World<WorldId1> = World::new();
 
         world.register_system(Sys1);
@@ -53,19 +55,19 @@ mod tests {
 
         for _ in range(0u, 100000u) {
             let entity = world.create_entity();
-            if rand::random::<f32>() > 0.5f32 {
+            if rng.gen::<f32>() > 0.5f32 {
                 world.assign_component(&entity, Cmp1);
             }
-            if rand::random::<f32>() > 0.3f32 {
+            if rng.gen::<f32>() > 0.3f32 {
                 world.assign_component(&entity, Cmp2);
             }
-            if rand::random::<f32>() > 0.1f32 {
+            if rng.gen::<f32>() > 0.1f32 {
                 world.assign_component(&entity, Cmp3);
             }
-            if rand::random::<f32>() > 0.1f32 {
+            if rng.gen::<f32>() > 0.1f32 {
                 world.assign_component(&entity, Cmp4);
             }
-            if rand::random::<f32>() > 0.1f32 {
+            if rng.gen::<f32>() > 0.1f32 {
                 world.assign_component(&entity, Cmp5);
             }
         }
@@ -76,7 +78,9 @@ mod tests {
     }
 
     #[bench]
-    fn bench_with_capture(bencher: &mut Bencher) {
+    fn bench_iterate_over_100k_entities_with_5_components_with_capture(bencher: &mut Bencher) {
+        let mut rng = XorShiftRng::new_unseeded();
+
         let mut world: World<WorldId1> = World::new();
 
         world.register_system(Sys2);
@@ -89,19 +93,19 @@ mod tests {
 
         for _ in range(0u, 100000u) {
             let entity = world.create_entity();
-            if rand::random::<f32>() > 0.5f32 {
+            if rng.gen::<f32>() > 0.5f32 {
                 world.assign_component(&entity, Cmp1);
             }
-            if rand::random::<f32>() > 0.3f32 {
+            if rng.gen::<f32>() > 0.3f32 {
                 world.assign_component(&entity, Cmp2);
             }
-            if rand::random::<f32>() > 0.1f32 {
+            if rng.gen::<f32>() > 0.1f32 {
                 world.assign_component(&entity, Cmp3);
             }
-            if rand::random::<f32>() > 0.1f32 {
+            if rng.gen::<f32>() > 0.1f32 {
                 world.assign_component(&entity, Cmp4);
             }
-            if rand::random::<f32>() > 0.1f32 {
+            if rng.gen::<f32>() > 0.1f32 {
                 world.assign_component(&entity, Cmp5);
             }
         }

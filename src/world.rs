@@ -158,6 +158,7 @@ macro_rules! entities_with_components(
 
 #[cfg(test)]
 mod tests {
+    use test::Bencher;
     use std::collections::{ VecMap };
     use super::{ World };
 
@@ -168,7 +169,7 @@ mod tests {
     fn create_entity() {
         let mut world:World<WorldId1> = World::new();
 
-        let entity = world.create_entity();
+        world.create_entity();
     }
 
     #[test]
@@ -190,5 +191,158 @@ mod tests {
         world.assign_component(&entity, Cmp1);
 
         world.destroy_entity(entity);
+    }
+
+    #[bench]
+    fn bench_create_entity(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        let mut world: World<WorldId1> = World::new();
+        bencher.iter(|| {
+            world.create_entity();
+        });
+    }
+
+    #[bench]
+    fn bench_create_entity_when_1_component(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        struct Cmp1;
+
+        let mut world: World<WorldId1> = World::new();
+
+        world.register_component::<Cmp1>(box VecMap::new());
+
+        let mut world: World<WorldId1> = World::new();
+        bencher.iter(|| {
+            world.create_entity();
+        });
+    }
+
+    #[bench]
+    fn bench_create_entity_when_2_components(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        struct Cmp1;
+        struct Cmp2;
+
+        let mut world: World<WorldId1> = World::new();
+
+        world.register_component::<Cmp1>(box VecMap::new());
+        world.register_component::<Cmp2>(box VecMap::new());
+
+        let mut world: World<WorldId1> = World::new();
+        bencher.iter(|| {
+            world.create_entity();
+        });
+    }
+
+    #[bench]
+    fn bench_destroy_entitiy(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        let mut world: World<WorldId1> = World::new();
+
+        bencher.iter(|| {
+            let entity = world.create_entity();
+            world.destroy_entity(entity);
+        });
+    }    
+
+    #[bench]
+    fn bench_destroy_entity_when_1_component(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        struct Cmp1;
+
+        let mut world: World<WorldId1> = World::new();
+
+        world.register_component::<Cmp1>(box VecMap::new());
+
+        bencher.iter(|| {
+            let entity = world.create_entity();
+            world.destroy_entity(entity);
+        });
+    }    
+
+    #[bench]
+    fn bench_destroy_entity_when_2_components(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        struct Cmp1;
+        struct Cmp2;
+
+        let mut world: World<WorldId1> = World::new();
+
+        world.register_component::<Cmp1>(box VecMap::new());
+        world.register_component::<Cmp2>(box VecMap::new());
+
+        bencher.iter(|| {
+            let entity = world.create_entity();
+            world.destroy_entity(entity);
+        });
+    }
+    #[bench]
+    fn bench_create_1mm_entities(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        let mut world: World<WorldId1> = World::new();
+        bencher.iter(|| {
+            for _ in range(0u, 1_000_000u) {
+                world.create_entity();
+            }
+        });
+    }
+
+    #[bench]
+    fn bench_destroy_1mm_entities(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        let mut world: World<WorldId1> = World::new();
+
+        bencher.iter(|| {
+            for _ in range(0u, 1_000_000u) {
+                let entity = world.create_entity();
+                world.destroy_entity(entity);
+            }
+        });
+    }    
+
+    #[bench]
+    fn bench_destroy_1mm_entities_when_1_component(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        struct Cmp1;
+
+        let mut world: World<WorldId1> = World::new();
+
+        world.register_component::<Cmp1>(box VecMap::new());
+
+        bencher.iter(|| {
+            for _ in range(0u, 1_000_000u) {
+                let entity = world.create_entity();
+                world.destroy_entity(entity);
+            }
+        });
+    }    
+
+    #[bench]
+    fn bench_destroy_1mm_entities_when_2_components(bencher: &mut Bencher) {
+        struct WorldId1;
+
+        struct Cmp1;
+        struct Cmp2;
+
+        let mut world: World<WorldId1> = World::new();
+
+        world.register_component::<Cmp1>(box VecMap::new());
+        world.register_component::<Cmp2>(box VecMap::new());
+
+        bencher.iter(|| {
+            for _ in range(0u, 1_000_000u) {
+                let entity = world.create_entity();
+                world.destroy_entity(entity);
+            }
+        });
     }
 }

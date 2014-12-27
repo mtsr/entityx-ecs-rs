@@ -171,6 +171,8 @@ impl<'a, WorldId> Iterator<Entity<WorldId>> for EntityIterator<'a, WorldId> {
 
 #[cfg(test)]
 mod tests {
+    use test::Bencher;
+
     use super::{ EntityManager };
 
     #[test]
@@ -195,18 +197,30 @@ mod tests {
         assert!(!entity_manager.is_valid(&entity1_clone));
     }
 
-    #[test]
-    fn create_reuses_index() {
+    #[bench]
+    fn create_1mm_entities(bencher: &mut Bencher) {
+
         struct WorldId1;
+
+        let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
+       bencher.iter(|| {
+            for _ in range(0u, 1_000_000u) {
+                entity_manager.create_entity();
+            }
+        });
+    }
+
+    #[bench]
+    fn destroy_1mm_entities(bencher: &mut Bencher) {
+        struct WorldId1;
+
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
 
-        let entity1 = entity_manager.create_entity();
-        let entity1_clone = entity1.clone();
-
-        entity_manager.destroy_entity(entity1);
-
-        let entity3 = entity_manager.create_entity();
-        assert_eq!(entity3.id.index, entity1_clone.id.index);
-        assert_eq!(entity3.id.version, entity1_clone.id.version + 1);
+        bencher.iter(|| {
+            for _ in range(0u, 1_000_000u) {
+                let entity = entity_manager.create_entity();
+                entity_manager.destroy_entity(entity);
+            }
+        });
     }
 }
