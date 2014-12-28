@@ -23,7 +23,7 @@ impl<WorldId> SystemManager<WorldId> {
         self.systems.insert(system);
     }
 
-    pub fn update<A, S>(&mut self, entity_manager: &mut EntityManager<WorldId>, component_manager: &ComponentManager<WorldId>, args: &A) where S: System<WorldId, S> + 'static {
+    pub fn update<A, S>(&mut self, entity_manager: &mut EntityManager<WorldId>, component_manager: &mut ComponentManager<WorldId>, args: &A) where S: System<WorldId, S> + 'static {
         match self.systems.get_mut::<S>() {
             Some(system) => {
                 let mut control: Control<WorldId, S> = Control::new();
