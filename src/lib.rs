@@ -174,28 +174,18 @@ mod tests {
                 if with_mask.intersect(component_mask) || without_mask.difference(component_mask) {
                     None
                 } else {
-                    Some((entity,))
+                    let index = &entity.index();
+                    Some((entity,
+                        component_data.1.list.get(index).unwrap(),
+                        component_data.2.list.get(index).unwrap(),
+                        component_data.3.list.get(index).unwrap(),
+                        component_data.4.list.get(index).unwrap(),
+                    ))
                 }
-            })
-            .map(|tuple| {
-                let index = &tuple.0.index();
-                tuple.tup_append(component_data.1.list.get(index).unwrap())
-            })
-            .map(|tuple| {
-                let index = &tuple.0.index();
-                tuple.tup_append(component_data.2.list.get(index).unwrap())
-            })
-            .map(|tuple| {
-                let index = &tuple.0.index();
-                tuple.tup_append(component_data.3.list.get(index).unwrap())
-            })
-            .map(|tuple| {
-                let index = &tuple.0.index();
-                tuple.tup_append(component_data.4.list.get(index).unwrap())
             }) {
                 // println!("{}", tuple);
                 counter += 1;
             }
         }
-    }
+   }
 }
