@@ -1,5 +1,5 @@
-use std::collections::{ BinaryHeap };
-use std::collections::binary_heap::{ Iter };
+use std::collections::{ RingBuf };
+use std::collections::ring_buf::{ Iter };
 
 // TODO Consider using unsafe for transmuting Option
 // use std::mem::transmute;
@@ -74,7 +74,9 @@ pub struct EntityManager<WorldId> {
     marker: marker::InvariantType<WorldId>,
 
     next_entity_index: uint,
-    free_entity_index_list: BinaryHeap<uint>,
+
+    // FIFO
+    free_entity_index_list: RingBuf<uint>,
 
     entity_versions: Vec<uint>,
 }
@@ -86,7 +88,7 @@ impl<'a, WorldId> EntityManager<WorldId> {
             marker: marker::InvariantType,
 
             next_entity_index: 0,
-            free_entity_index_list: BinaryHeap::with_capacity(32),
+            free_entity_index_list: RingBuf::with_capacity(MINIMUM_FREE_ENTITY_INDICES),
 
             entity_versions: Vec::from_elem(initial_capacity, 0u),
         }
@@ -94,7 +96,8 @@ impl<'a, WorldId> EntityManager<WorldId> {
 
     pub fn create_entity(&mut self) -> Entity<WorldId> {
         let index = if self.free_entity_index_list.len() > MINIMUM_FREE_ENTITY_INDICES {
-            self.free_entity_index_list.pop().unwrap()
+            // FIFO
+            self.free_entity_index_list.pop_front().unwrap()
         } else {
             let index = self.next_entity_index;
             self.next_entity_index += 1;
@@ -113,7 +116,8 @@ impl<'a, WorldId> EntityManager<WorldId> {
     pub fn destroy_entity(&mut self, entity: Entity<WorldId>) {
         // TODO clear/invalidate component data
         self.entity_versions[entity.index()] += 1;
-        self.free_entity_index_list.push(entity.index());
+        // FIFO
+        self.free_entity_index_list.push_back(entity.index());
     }
 
     pub fn is_valid(&self, entity: &Entity<WorldId>) -> bool {
@@ -211,7 +215,7 @@ mod tests {
     }
 
     #[bench]
-    fn destroy_1mm_entities(bencher: &mut Bencher) {
+    fn create_destroy_1mm_entities(bencher: &mut Bencher) {
         struct WorldId1;
 
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
