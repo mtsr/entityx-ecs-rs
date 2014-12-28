@@ -161,7 +161,7 @@ mod tests {
             let mut with_mask = Bitv::from_elem(component_manager.get_components_length(), false);
             let mut without_mask = Bitv::from_elem(component_manager.get_components_length(), false);
 
-            for tuple in entity_manager.entities().filter(|entity| {
+            for tuple in entity_manager.entities().filter_map(|entity| {
                 with_mask.set(component_data.1.index, true);
                 with_mask.set(component_data.2.index, true);
                 with_mask.set(component_data.3.index, true);
@@ -169,41 +169,29 @@ mod tests {
 
                 without_mask.set(component_data.0.index, true);
 
-                let component_mask = component_manager.get_entity_component_mask(entity);
+                let component_mask = component_manager.get_entity_component_mask(&entity);
 
                 if with_mask.intersect(component_mask) || without_mask.difference(component_mask) {
-                    false
+                    None
                 } else {
-                    true
+                    Some((entity,))
                 }
             })
-            .filter_map(|entity: Entity<WorldId>| {
-                if let Some(component) = component_data.1.list.get(&entity.index()) {
-                    return Some((entity, component));
-                } else {
-                    None
-                }
+            .map(|tuple| {
+                let index = &tuple.0.index();
+                tuple.tup_append(component_data.1.list.get(index).unwrap())
             })
-            .filter_map(|tuple| {
-                if let Some(component) = component_data.2.list.get(&tuple.0.index()) {
-                    return Some(tuple.tup_append(component));
-                } else {
-                    None
-                }
+            .map(|tuple| {
+                let index = &tuple.0.index();
+                tuple.tup_append(component_data.2.list.get(index).unwrap())
             })
-            .filter_map(|tuple| {
-                if let Some(component) = component_data.3.list.get(&tuple.0.index()) {
-                    return Some(tuple.tup_append(component));
-                } else {
-                    None
-                }
+            .map(|tuple| {
+                let index = &tuple.0.index();
+                tuple.tup_append(component_data.3.list.get(index).unwrap())
             })
-            .filter_map(|tuple| {
-                if let Some(component) = component_data.4.list.get(&tuple.0.index()) {
-                    return Some(tuple.tup_append(component));
-                } else {
-                    None
-                }
+            .map(|tuple| {
+                let index = &tuple.0.index();
+                tuple.tup_append(component_data.4.list.get(index).unwrap())
             }) {
                 // println!("{}", tuple);
                 counter += 1;
