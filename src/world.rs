@@ -7,12 +7,12 @@ use component::{ ComponentManager, ComponentList, ComponentData };
 use system::{ SystemManager, System };
 
 // TODO Add Entity Templates
+// TODO Test serialization feasibility
 
 pub struct World<WorldId> {
     entity_manager: EntityManager<WorldId>,
     system_manager: SystemManager<WorldId>,
     component_manager: ComponentManager<WorldId>,
-    component_destroyers: Vec<Box<for<'b> Fn(&'b Entity<WorldId>, &'b mut ComponentManager<WorldId>) + 'static>>,
 }
 
 impl<WorldId> World<WorldId> {
@@ -23,7 +23,6 @@ impl<WorldId> World<WorldId> {
             entity_manager: EntityManager::new(initial_capacity),
             system_manager: SystemManager::new(),
             component_manager: ComponentManager::new(initial_capacity),
-            component_destroyers: Vec::new(),
         }
     }
 
@@ -36,10 +35,7 @@ impl<WorldId> World<WorldId> {
     }
 
     pub fn destroy_entity(&mut self, entity: Entity<WorldId>) {
-        let mut destroyers = self.component_destroyers.iter();
-        while let Some(destroyer) = destroyers.next() {
-            destroyer.call((&entity, &mut self.component_manager));
-        }
+        self.component_manager.entity_destroyed(&entity);
         self.entity_manager.destroy_entity(entity)
     }
 
@@ -54,13 +50,6 @@ impl<WorldId> World<WorldId> {
     // *** ComponentManager ***
 
     pub fn register_component<C: 'static>(&mut self, component_list: Box<ComponentList<C> + 'static>) {
-        // TODO benchmark speed, since remove_component could be slow
-        // since it has to do a get_component_data per entity
-        // As component removals are batched after a system update it
-        // should be possible to improve this
-        self.component_destroyers.push(box |entity: &Entity<WorldId>, component_manager: &mut ComponentManager<WorldId>| {
-            &component_manager.remove_component::<C>(entity);
-        });
         self.component_manager.register_component(component_list)
     }
 
@@ -238,7 +227,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_create_destroy_entitiy(bencher: &mut Bencher) {
+    fn bench_create_destroy_entity(bencher: &mut Bencher) {
         struct WorldId1;
 
         let mut world: World<WorldId1> = World::new();
