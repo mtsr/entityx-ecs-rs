@@ -238,7 +238,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_destroy_entitiy(bencher: &mut Bencher) {
+    fn bench_create_destroy_entitiy(bencher: &mut Bencher) {
         struct WorldId1;
 
         let mut world: World<WorldId1> = World::new();
@@ -250,7 +250,7 @@ mod tests {
     }    
 
     #[bench]
-    fn bench_destroy_entity_when_1_component(bencher: &mut Bencher) {
+    fn bench_create_destroy_entity_when_1_component(bencher: &mut Bencher) {
         struct WorldId1;
 
         struct Cmp1;
@@ -266,7 +266,7 @@ mod tests {
     }    
 
     #[bench]
-    fn bench_destroy_entity_when_2_components(bencher: &mut Bencher) {
+    fn bench_create_destroy_entity_when_2_components(bencher: &mut Bencher) {
         struct WorldId1;
 
         struct Cmp1;
@@ -295,7 +295,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_destroy_1mm_entities(bencher: &mut Bencher) {
+    fn bench_create_destroy_1mm_entities(bencher: &mut Bencher) {
         struct WorldId1;
 
         let mut world: World<WorldId1> = World::new();
@@ -309,7 +309,7 @@ mod tests {
     }    
 
     #[bench]
-    fn bench_destroy_1mm_entities_when_1_component(bencher: &mut Bencher) {
+    fn bench_create_destroy_1mm_entities_when_1_component(bencher: &mut Bencher) {
         struct WorldId1;
 
         struct Cmp1;
@@ -327,7 +327,7 @@ mod tests {
     }    
 
     #[bench]
-    fn bench_destroy_1mm_entities_when_2_components(bencher: &mut Bencher) {
+    fn bench_create_destroy_1mm_entities_when_2_components(bencher: &mut Bencher) {
         struct WorldId1;
 
         struct Cmp1;
