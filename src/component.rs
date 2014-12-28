@@ -120,21 +120,35 @@ impl<'a, WorldId> ComponentManager<WorldId> {
 
     pub fn has_component<C: 'static>(&self, entity: &Entity<WorldId>) -> bool {
         let component_data = self.get_component_data::<C>();
+        self.has_component_from_data::<C>(entity, component_data)
+    }
+
+    #[inline]
+    fn has_component_from_data<C: 'static>(&self, entity: &Entity<WorldId>, component_data: &ComponentData<C>) -> bool {
         self.entity_component_masks[entity.index()].get(component_data.index).unwrap()
     }
 
     pub fn get_component<C: 'static>(&'a self, entity: &Entity<WorldId>) -> Option<&C> {
-        // Assumes components for deleted entities have been removed
-        // If this ever changes, readd has_component()
         let component_data = self.get_component_data::<C>();
-        component_data.list.get(&entity.index())
+        let component = component_data.list.get(&entity.index());
+        if component.is_some() && !self.has_component_from_data(entity, component_data) {
+            None
+        } else {
+            component
+        }
     }
 
     pub fn get_component_mut<C: 'static>(&'a mut self, entity: &Entity<WorldId>) -> Option<&mut C> {
-        // Assumes components for deleted entities have been removed
-        // If this ever changes, readd has_component()
+        // TODO figure out how to do this without cloning
+        let entity_component_mask = self.entity_component_masks[entity.index()].clone();
+
         let component_data = self.get_component_data_mut::<C>();
-        component_data.list.get_mut(&entity.index())
+        let component = component_data.list.get_mut(&entity.index());
+        if component.is_some() && !entity_component_mask.get(component_data.index).unwrap() {
+            None
+        } else {
+            component
+        }
     }
 
     pub fn get_component_data<C: 'static>(&'a self) -> &ComponentData<C> {
