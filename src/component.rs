@@ -5,15 +5,13 @@ use anymap::AnyMap;
 use entity::{ Entity };
 
 // TODO more DB like approach to ECS i.e. more powerful query tools
-// TODO optimize getting entities with components
-// by starting from the 'with' component with the fewest instances
 // TODO Add Component Copy-on-Write from Template
+// TODO Consider using unsafe for transmuting Option
+// use std::mem::transmute;
 
 pub struct ComponentData<'a, Component: 'static> {
     pub index: uint,
     pub list: Box<ComponentList<'a, Component> + 'static>
-    // TODO consider adding a counter to allow ordering component checking
-    // when iterating over entities with components
 }
 
 // TODO Add BTreeMap

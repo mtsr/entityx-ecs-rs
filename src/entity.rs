@@ -1,9 +1,6 @@
 use std::collections::{ RingBuf };
 use std::collections::ring_buf::{ Iter };
 
-// TODO Consider using unsafe for transmuting Option
-// use std::mem::transmute;
-
 use std::iter::{ Iterator };
 use std::uint;
 use std::fmt::{ Show, Formatter, Error };
