@@ -1,4 +1,7 @@
-#![feature(phase,macro_rules,unboxed_closures)]
+#![feature(unboxed_closures)]
+// TODO remove once number of warnings goes down
+#![allow(unstable)]
+
 extern crate anymap;
 extern crate test;
 
@@ -25,7 +28,6 @@ mod tests {
     use super::{
         World,
         EntityManager,
-        Entity,
         ComponentManager,
         Control,
         System,
@@ -40,20 +42,20 @@ mod tests {
     }
 
     #[bench]
-    fn bench_iterate_over_100k_entities_with_5_components_with_macro(bencher: &mut Bencher) {
+    fn bench_iterate_over_100k_entities_with_5_components(bencher: &mut Bencher) {
         let mut rng = XorShiftRng::new_unseeded();
 
         let mut world: World<WorldId1> = World::new();
 
-        world.register_system(Sys1);
+        world.register_system(Sys);
 
-        world.register_component::<Cmp1>(box VecMap::new());
-        world.register_component::<Cmp2>(box VecMap::new());
-        world.register_component::<Cmp3>(box VecMap::new());
-        world.register_component::<Cmp4>(box VecMap::new());
-        world.register_component::<Cmp5>(box HashMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
+        world.register_component::<Cmp2>(Box::new(VecMap::new()));
+        world.register_component::<Cmp3>(Box::new(VecMap::new()));
+        world.register_component::<Cmp4>(Box::new(VecMap::new()));
+        world.register_component::<Cmp5>(Box::new(HashMap::new()));
 
-        for _ in range(0u, 100000u) {
+        for _ in range(0us, 100000us) {
             let entity = world.create_entity();
             if rng.gen::<f32>() > 0.5f32 {
                 world.assign_component(&entity, Cmp1);
@@ -73,84 +75,33 @@ mod tests {
         }
 
         bencher.iter(|| {
-            world.update_system::<uint, Sys1>(&0u);
-        });
-    }
-
-    #[bench]
-    fn bench_iterate_over_100k_entities_with_5_components_with_capture(bencher: &mut Bencher) {
-        let mut rng = XorShiftRng::new_unseeded();
-
-        let mut world: World<WorldId1> = World::new();
-
-        world.register_system(Sys2);
-
-        world.register_component::<Cmp1>(box VecMap::new());
-        world.register_component::<Cmp2>(box VecMap::new());
-        world.register_component::<Cmp3>(box VecMap::new());
-        world.register_component::<Cmp4>(box VecMap::new());
-        world.register_component::<Cmp5>(box HashMap::new());
-
-        for _ in range(0u, 100000u) {
-            let entity = world.create_entity();
-            if rng.gen::<f32>() > 0.5f32 {
-                world.assign_component(&entity, Cmp1);
-            }
-            if rng.gen::<f32>() > 0.3f32 {
-                world.assign_component(&entity, Cmp2);
-            }
-            if rng.gen::<f32>() > 0.1f32 {
-                world.assign_component(&entity, Cmp3);
-            }
-            if rng.gen::<f32>() > 0.1f32 {
-                world.assign_component(&entity, Cmp4);
-            }
-            if rng.gen::<f32>() > 0.1f32 {
-                world.assign_component(&entity, Cmp5);
-            }
-        }
-
-        bencher.iter(|| {
-            world.update_system::<uint, Sys2>(&0u);
+            world.update_system::<usize, Sys>(&0us);
         });
     }
 
     struct WorldId1;
 
-    #[deriving(Show)]
+    #[derive(Show)]
     struct Cmp1;
 
-    #[deriving(Show)]
+    #[derive(Show)]
     struct Cmp2;
 
-    #[deriving(Show)]
+    #[derive(Show)]
     struct Cmp3;
 
-    #[deriving(Show)]
+    #[derive(Show)]
     struct Cmp4;
 
-    #[deriving(Show)]
+    #[derive(Show)]
     struct Cmp5;
 
-    struct Sys1;
+    struct Sys;
 
-    impl<WorldId> System<WorldId, Sys1> for Sys1 {
-        fn update<A>(&mut self, entity_manager: &EntityManager<WorldId>, component_manager: &ComponentManager<WorldId>, _: &mut Control<WorldId, Sys1>, _: &A) {
+    impl<WorldId> System<WorldId, Sys> for Sys {
+        fn update<A>(&mut self, entity_manager: &EntityManager<WorldId>, component_manager: &ComponentManager<WorldId>, _: &mut Control<WorldId, Sys>, _: &A) {
 
-            let mut counter = 0u;
-
-            for (_, _, _, _, _) in entities_with_components!(entity_manager, component_manager: without Cmp1 with Cmp2 with Cmp3 with Cmp4 with Cmp5) {
-                counter += 1;
-            }
-        }
-    }
-
-    struct Sys2;
-
-    impl<WorldId> System<WorldId, Sys2> for Sys2 {
-        fn update<A>(&mut self, entity_manager: &EntityManager<WorldId>, component_manager: &ComponentManager<WorldId>, _: &mut Control<WorldId, Sys2>, _: &A) {
-
-            let mut counter = 0u;
+            let mut counter = 0us;
 
             let component_data = (component_manager.get_component_data::<Cmp1>(),)
             .tup_append(component_manager.get_component_data::<Cmp2>())

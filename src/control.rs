@@ -4,7 +4,7 @@ pub trait EntityBuilder<WorldId, S>: 'static {
     fn build(&mut self, &mut EntityManager<WorldId>, &mut S, Entity<WorldId>);
 }
 
-impl<WorldId, S> EntityBuilder<WorldId, S> for |&mut EntityManager<WorldId>, &mut S, Entity<WorldId>|: 'static {
+impl<WorldId, S> EntityBuilder<WorldId, S> for Fn(&mut EntityManager<WorldId>, &mut S, Entity<WorldId>) + 'static {
     fn build(&mut self, c: &mut EntityManager<WorldId>, s: &mut S, e: Entity<WorldId>) {
         (*self)(c, s, e);
     }
@@ -14,7 +14,7 @@ pub trait EntityModifier<WorldId, S>: 'static {
     fn modify(&mut self, &mut EntityManager<WorldId>, &mut S, Entity<WorldId>);
 }
 
-impl<WorldId, S> EntityModifier<WorldId, S> for |&mut EntityManager<WorldId>, &mut S, Entity<WorldId>|: 'static {
+impl<WorldId, S> EntityModifier<WorldId, S> for Fn(&mut EntityManager<WorldId>, &mut S, Entity<WorldId>) + 'static {
     fn modify(&mut self, c: &mut EntityManager<WorldId>, s: &mut S, e: Entity<WorldId>) {
         (*self)(c, s, e);
     }

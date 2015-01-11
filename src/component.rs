@@ -10,52 +10,52 @@ use entity::{ Entity };
 // use std::mem::transmute;
 
 pub struct ComponentData<'a, Component: 'static> {
-    pub index: uint,
+    pub index: usize,
     pub list: Box<ComponentList<'a, Component> + 'static>
 }
 
 // TODO Add BTreeMap
 pub trait ComponentList<'a, Component> {
-    fn contains_key(&self, &uint) -> bool;
-    fn get(&self, &uint) -> Option<&Component>;
-    fn get_mut(&mut self, &uint) -> Option<&mut Component>;
-    fn insert(&mut self, uint, Component);
-    fn remove(&mut self, key: &uint) -> Option<Component>;
+    fn contains_key(&self, &usize) -> bool;
+    fn get(&self, &usize) -> Option<&Component>;
+    fn get_mut(&mut self, &usize) -> Option<&mut Component>;
+    fn insert(&mut self, usize, Component);
+    fn remove(&mut self, key: &usize) -> Option<Component>;
     // TODO figure out return type
-    // fn iter(&'a self) -> Iterator<(uint, &'a Component)>;
-    // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)>;
+    // fn iter(&'a self) -> Iterator<(usize, &'a Component)>;
+    // fn iter_mut(&'a self) -> Iterator<(usize, &'a mut Component)>;
 }
 
 impl<'a, Component> ComponentList<'a, Component> for VecMap<Component> {
-    fn contains_key(&self, index: &uint) -> bool { self.contains_key(index) }
-    fn get(&self, index: &uint) -> Option<&Component> { self.get(index) }
-    fn get_mut(&mut self, index: &uint) -> Option<&mut Component> { self.get_mut(index) }
-    fn insert(&mut self, index: uint, component: Component) { self.insert(index, component); }
-    fn remove(&mut self, key: &uint) -> Option<Component> { self.remove(key) }
+    fn contains_key(&self, index: &usize) -> bool { self.contains_key(index) }
+    fn get(&self, index: &usize) -> Option<&Component> { self.get(index) }
+    fn get_mut(&mut self, index: &usize) -> Option<&mut Component> { self.get_mut(index) }
+    fn insert(&mut self, index: usize, component: Component) { self.insert(index, component); }
+    fn remove(&mut self, key: &usize) -> Option<Component> { self.remove(key) }
     // TODO figure out return type
-    // fn iter(&'a self) -> Iterator<(uint, &'a Component)> { self.iter() }
-    // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)> { self.iter_mut() }
+    // fn iter(&'a self) -> Iterator<(usize, &'a Component)> { self.iter() }
+    // fn iter_mut(&'a self) -> Iterator<(usize, &'a mut Component)> { self.iter_mut() }
 }
 
-impl<'a, Component> ComponentList<'a, Component> for HashMap<uint, Component> {
-    fn contains_key(&self, index: &uint) -> bool { self.contains_key(index) }
-    fn get(&self, index: &uint) -> Option<&Component> { self.get(index) }
-    fn get_mut(&mut self, index: &uint) -> Option<&mut Component> { self.get_mut(index) }
-    fn insert(&mut self, index: uint, component: Component) { self.insert(index, component); }
-    fn remove(&mut self, key: &uint) -> Option<Component> { self.remove(key) }
+impl<'a, Component> ComponentList<'a, Component> for HashMap<usize, Component> {
+    fn contains_key(&self, index: &usize) -> bool { self.contains_key(index) }
+    fn get(&self, index: &usize) -> Option<&Component> { self.get(index) }
+    fn get_mut(&mut self, index: &usize) -> Option<&mut Component> { self.get_mut(index) }
+    fn insert(&mut self, index: usize, component: Component) { self.insert(index, component); }
+    fn remove(&mut self, key: &usize) -> Option<Component> { self.remove(key) }
     // TODO figure out return type
-    // fn iter(&'a self) -> Iterator<(uint, &'a Component)> { self.iter() }
-    // fn iter_mut(&'a self) -> Iterator<(uint, &'a mut Component)> { self.iter_mut() }
+    // fn iter(&'a self) -> Iterator<(usize, &'a Component)> { self.iter() }
+    // fn iter_mut(&'a self) -> Iterator<(usize, &'a mut Component)> { self.iter_mut() }
 }
 
 pub struct ComponentManager<WorldId> {
     entity_component_masks: Vec<Bitv>,
-    next_component_index: uint,
+    next_component_index: usize,
     component_data: AnyMap,
 }
 
 impl<'a, WorldId> ComponentManager<WorldId> {
-    pub fn new(initial_capacity: uint) -> ComponentManager<WorldId> {
+    pub fn new(initial_capacity: usize) -> ComponentManager<WorldId> {
         ComponentManager {
             entity_component_masks: Vec::with_capacity(initial_capacity),
             next_component_index: 0,
@@ -169,7 +169,7 @@ impl<'a, WorldId> ComponentManager<WorldId> {
         &self.entity_component_masks[entity.index()]
     }
 
-    pub fn get_components_length(&self) -> uint {
+    pub fn get_components_length(&self) -> usize {
         self.next_component_index
     }
 
@@ -189,19 +189,19 @@ mod tests {
         let mut component_manager: ComponentManager<WorldId1> = ComponentManager::new(256);
 
         // test different datastructures
-        #[deriving(PartialEq, Show)]
+        #[derive(PartialEq, Show)]
         struct UnitComponent;
-        component_manager.register_component::<UnitComponent>(box VecMap::new());
+        component_manager.register_component::<UnitComponent>(Box::new(VecMap::new()));
 
-        #[deriving(PartialEq, Show)]
-        struct TupleComponent(int);
-        component_manager.register_component::<TupleComponent>(box HashMap::new());
+        #[derive(PartialEq, Show)]
+        struct TupleComponent(isize);
+        component_manager.register_component::<TupleComponent>(Box::new(HashMap::new()));
 
-        #[deriving(PartialEq, Show)]
+        #[derive(PartialEq, Show)]
         struct Component {
-            field: int,
+            field: isize,
         }
-        component_manager.register_component::<Component>(box VecMap::new());
+        component_manager.register_component::<Component>(Box::new(VecMap::new()));
     }
 
     #[test]
@@ -211,19 +211,19 @@ mod tests {
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
 
         // test different datastructures
-        #[deriving(PartialEq, Show)]
+        #[derive(PartialEq, Show)]
         struct UnitComponent;
-        component_manager.register_component::<UnitComponent>(box VecMap::new());
+        component_manager.register_component::<UnitComponent>(Box::new(VecMap::new()));
 
-        #[deriving(PartialEq, Show)]
-        struct TupleComponent(int);
-        component_manager.register_component::<TupleComponent>(box HashMap::new());
+        #[derive(PartialEq, Show)]
+        struct TupleComponent(isize);
+        component_manager.register_component::<TupleComponent>(Box::new(HashMap::new()));
 
-        #[deriving(PartialEq, Show)]
+        #[derive(PartialEq, Show)]
         struct Component {
-            field: int,
+            field: isize,
         }
-        component_manager.register_component::<Component>(box VecMap::new());
+        component_manager.register_component::<Component>(Box::new(VecMap::new()));
 
         let entity = entity_manager.create_entity();
         component_manager.entity_created(&entity);
@@ -246,19 +246,19 @@ mod tests {
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
 
         // test different datastructures
-        #[deriving(PartialEq, Show)]
+        #[derive(PartialEq, Show)]
         struct UnitComponent;
-        component_manager.register_component::<UnitComponent>(box VecMap::new());
+        component_manager.register_component::<UnitComponent>(Box::new(VecMap::new()));
 
-        #[deriving(PartialEq, Show)]
-        struct TupleComponent(int);
-        component_manager.register_component::<TupleComponent>(box HashMap::new());
+        #[derive(PartialEq, Show)]
+        struct TupleComponent(isize);
+        component_manager.register_component::<TupleComponent>(Box::new(HashMap::new()));
 
-        #[deriving(PartialEq, Show)]
+        #[derive(PartialEq, Show)]
         struct Component {
-            field: int,
+            field: isize,
         }
-        component_manager.register_component::<Component>(box VecMap::new());
+        component_manager.register_component::<Component>(Box::new(VecMap::new()));
 
         let entity = entity_manager.create_entity();
         component_manager.entity_created(&entity);
@@ -285,7 +285,7 @@ mod tests {
         let mut component_manager: ComponentManager<WorldId1> = ComponentManager::new(256);
 
         struct Component;
-        component_manager.register_component::<Component>(box VecMap::new());
-        component_manager.register_component::<Component>(box VecMap::new());
+        component_manager.register_component::<Component>(Box::new(VecMap::new()));
+        component_manager.register_component::<Component>(Box::new(VecMap::new()));
     }
 }

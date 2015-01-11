@@ -1,5 +1,3 @@
-#![macro_escape]
-
 use std::collections::{ Bitv };
 
 use entity::{ EntityManager, Entity, EntityIterator };
@@ -17,7 +15,7 @@ pub struct World<WorldId> {
 
 impl<WorldId> World<WorldId> {
     pub fn new() -> World<WorldId> {
-        let initial_capacity = 256u;
+        let initial_capacity = 256us;
 
         World {
             entity_manager: EntityManager::new(initial_capacity),
@@ -89,7 +87,7 @@ impl<WorldId> World<WorldId> {
         self.component_manager.get_entity_component_mask(entity)
     }
 
-    pub fn get_components_length(&self) -> uint {
+    pub fn get_components_length(&self) -> usize {
         self.component_manager.get_components_length()
     }
 
@@ -105,45 +103,6 @@ impl<WorldId> World<WorldId> {
 }
 
 // TODO allow with Player(1) style queries.
-
-#[macro_export]
-macro_rules! entities_with_components_inner(
-    ( $entity_manager:ident, $component_manager:ident, $already:expr : ) => ( $already );
-    ( $entity_manager:ident, $component_manager:ident, $already:expr : with $ty:path $( $kinds:ident $types:path )* ) => (
-        entities_with_components_inner!( $entity_manager, $component_manager, $already.and_then(|tuple| {
-            let comp = $component_manager.get_component::<$ty>(&tuple.0);
-            match comp {
-                Some(obj) => Some( tuple.tup_append(obj) ),
-                None => None
-            }
-        } ) : $( $kinds $types )* )
-    );
-    ( $entity_manager:ident, $component_manager:ident, $already:expr : without $ty:path $( $kinds:ident $types:path )* ) => (
-        entities_with_components_inner!( $entity_manager, $component_manager, $already.and_then(|tuple|
-            if let Some(_) = $component_manager.get_component::<$ty>(&tuple.0) {
-                None
-            } else {
-                Some(tuple)
-            }
-        ) : $( $kinds $types )* )
-    );
-    ( $entity_manager:ident, $component_manager:ident, $already:expr : option $ty:path $( $kinds:ident $types:path )* ) => (
-        entities_with_components_inner!( $entity_manager, $component_manager, $already.map(|tuple| {
-            let comp = $component_manager.get_component::<$ty>(&tuple.0);
-            tuple.tup_append( comp )
-        } ) : $( $kinds $types )* )
-    );
-);
-
-#[macro_export]
-macro_rules! entities_with_components(
-    ( $entity_manager:ident, $component_manager:ident : $( $kinds:ident $types:path )* ) => (
-        $entity_manager.entities().filter_map(|entity|
-            entities_with_components_inner!($entity_manager, $component_manager, Some((entity,)): $( $kinds $types )* )
-        )
-    );
-);
-
 
 #[cfg(test)]
 mod tests {
@@ -173,7 +132,7 @@ mod tests {
     fn destroy_entity_with_components() {
         let mut world:World<WorldId1> = World::new();
 
-        world.register_component::<Cmp1>(box VecMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
 
         let entity = world.create_entity();
 
@@ -200,7 +159,7 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
 
-        world.register_component::<Cmp1>(box VecMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
 
         let mut world: World<WorldId1> = World::new();
         bencher.iter(|| {
@@ -217,8 +176,8 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
 
-        world.register_component::<Cmp1>(box VecMap::new());
-        world.register_component::<Cmp2>(box VecMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
+        world.register_component::<Cmp2>(Box::new(VecMap::new()));
 
         let mut world: World<WorldId1> = World::new();
         bencher.iter(|| {
@@ -246,7 +205,7 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
 
-        world.register_component::<Cmp1>(box VecMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
 
         bencher.iter(|| {
             let entity = world.create_entity();
@@ -263,8 +222,8 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
 
-        world.register_component::<Cmp1>(box VecMap::new());
-        world.register_component::<Cmp2>(box VecMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
+        world.register_component::<Cmp2>(Box::new(VecMap::new()));
 
         bencher.iter(|| {
             let entity = world.create_entity();
@@ -277,7 +236,7 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
         bencher.iter(|| {
-            for _ in range(0u, 1_000_000u) {
+            for _ in range(0us, 1_000_000us) {
                 world.create_entity();
             }
         });
@@ -290,7 +249,7 @@ mod tests {
         let mut world: World<WorldId1> = World::new();
 
         bencher.iter(|| {
-            for _ in range(0u, 1_000_000u) {
+            for _ in range(0us, 1_000_000us) {
                 let entity = world.create_entity();
                 world.destroy_entity(entity);
             }
@@ -305,10 +264,10 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
 
-        world.register_component::<Cmp1>(box VecMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
 
         bencher.iter(|| {
-            for _ in range(0u, 1_000_000u) {
+            for _ in range(0us, 1_000_000us) {
                 let entity = world.create_entity();
                 world.destroy_entity(entity);
             }
@@ -324,11 +283,11 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
 
-        world.register_component::<Cmp1>(box VecMap::new());
-        world.register_component::<Cmp2>(box VecMap::new());
+        world.register_component::<Cmp1>(Box::new(VecMap::new()));
+        world.register_component::<Cmp2>(Box::new(VecMap::new()));
 
         bencher.iter(|| {
-            for _ in range(0u, 1_000_000u) {
+            for _ in range(0us, 1_000_000us) {
                 let entity = world.create_entity();
                 world.destroy_entity(entity);
             }

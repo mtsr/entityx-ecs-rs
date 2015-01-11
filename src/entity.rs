@@ -1,15 +1,16 @@
 use std::collections::{ RingBuf };
 use std::collections::ring_buf::{ Iter };
 
-use std::iter::{ Iterator };
-use std::uint;
+use std::iter::{ Iterator, repeat };
+use std::{ usize };
 use std::fmt::{ Show, Formatter, Error };
 
-use std::kinds::marker;
+use std::marker::{ InvariantType };
 
-// use 1/4 of uint bits for version rest for index
-const INDEX_BITS: uint = uint::BITS / 4 * 3;
-const INDEX_MASK: uint = (1 << INDEX_BITS) - 1;
+// TODO get rid of usize here
+// use 1/4 of usize bits for version rest for index
+const INDEX_BITS: usize = usize::BITS / 4 * 3;
+const INDEX_MASK: usize = (1 << INDEX_BITS) - 1;
 
 // Necessary to ensure enough versions in limited number of bits
 // eg 8 bits = only 256 versions
@@ -17,17 +18,17 @@ const INDEX_MASK: uint = (1 << INDEX_BITS) - 1;
 // even destroying and creating a single entity will still allow
 // 256 * MINIMUM_FREE_ENTITY_INDICES entities to be created before
 // version wraps around
-const MINIMUM_FREE_ENTITY_INDICES: uint = 1000;
+const MINIMUM_FREE_ENTITY_INDICES: usize = 1000;
 
 pub struct Entity<WorldId> {
-    id: uint,
-    marker: marker::InvariantType<WorldId>,
+    id: usize,
+    marker: InvariantType<WorldId>,
 }
 
 impl<'a, WorldId> Entity<WorldId> {
-    pub fn new(marker: marker::InvariantType<WorldId>, index: uint, version: uint) -> Entity<WorldId> {
-        debug_assert!(index & INDEX_MASK as uint == index);
-        debug_assert!(version & !INDEX_MASK as uint == version);
+    pub fn new(marker: InvariantType<WorldId>, index: usize, version: usize) -> Entity<WorldId> {
+        debug_assert!(index & INDEX_MASK as usize == index);
+        debug_assert!(version & !INDEX_MASK as usize == version);
 
         Entity {
             id: index | (version << INDEX_BITS),
@@ -36,12 +37,12 @@ impl<'a, WorldId> Entity<WorldId> {
     }
 
     #[inline]
-    pub fn index(&self) -> uint {
+    pub fn index(&self) -> usize {
         self.id & INDEX_MASK
     }
 
     #[inline]
-    pub fn version(&self) -> uint {
+    pub fn version(&self) -> usize {
         self.id >> INDEX_BITS
     }
 }
@@ -68,26 +69,26 @@ impl<WorldId> Show for Entity<WorldId> {
 }
 
 pub struct EntityManager<WorldId> {
-    marker: marker::InvariantType<WorldId>,
+    marker: InvariantType<WorldId>,
 
-    next_entity_index: uint,
+    next_entity_index: usize,
 
     // FIFO
-    free_entity_index_list: RingBuf<uint>,
+    free_entity_index_list: RingBuf<usize>,
 
-    entity_versions: Vec<uint>,
+    entity_versions: Vec<usize>,
 }
 
 impl<'a, WorldId> EntityManager<WorldId> {
-    pub fn new(initial_capacity: uint) -> EntityManager<WorldId> {
+    pub fn new(initial_capacity: usize) -> EntityManager<WorldId> {
 
         EntityManager {
-            marker: marker::InvariantType,
+            marker: InvariantType,
 
             next_entity_index: 0,
             free_entity_index_list: RingBuf::with_capacity(MINIMUM_FREE_ENTITY_INDICES),
 
-            entity_versions: Vec::from_elem(initial_capacity, 0u),
+            entity_versions: repeat(0us).take(initial_capacity).collect(),
         }
     }
 
@@ -101,10 +102,11 @@ impl<'a, WorldId> EntityManager<WorldId> {
             index
         };
 
-        if index >= self.entity_versions.len() {
+        let entity_versions_len = self.entity_versions.len();
+        if index >= entity_versions_len {
             // grow increases capacity in a smart way
             // no reason to specify particular size here
-            self.entity_versions.grow(index, 0u);
+            self.entity_versions.extend(repeat(0us).take(entity_versions_len));
         }
 
         let version = self.entity_versions[index];
@@ -134,12 +136,14 @@ impl<'a, WorldId> EntityManager<WorldId> {
 
 pub struct EntityIterator<'a, WorldId: 'a> {
     entity_manager: &'a EntityManager<WorldId>,
-    last_entity_index: uint,
-    index: uint,
-    free_entity_index_list: Iter<'a, uint>,
+    last_entity_index: usize,
+    index: usize,
+    free_entity_index_list: Iter<'a, usize>,
 }
 
-impl<'a, WorldId> Iterator<Entity<WorldId>> for EntityIterator<'a, WorldId> {
+impl<'a, WorldId> Iterator for EntityIterator<'a, WorldId> {
+    type Item = Entity<WorldId>;
+
     fn next(&mut self) -> Option<Entity<WorldId>> {
         // for all valid entity indexes
         while self.index <= self.last_entity_index {
@@ -149,7 +153,7 @@ impl<'a, WorldId> Iterator<Entity<WorldId>> for EntityIterator<'a, WorldId> {
             while free_entity_index < self.index {
                 free_entity_index = match self.free_entity_index_list.next() {
                     Some(x) => *x,
-                    None => uint::MAX,
+                    None => usize::MAX,
                 }
             }
 
@@ -205,7 +209,7 @@ mod tests {
 
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
        bencher.iter(|| {
-            for _ in range(0u, 1_000_000u) {
+            for _ in range(0us, 1_000_000us) {
                 entity_manager.create_entity();
             }
         });
@@ -218,7 +222,7 @@ mod tests {
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
 
         bencher.iter(|| {
-            for _ in range(0u, 1_000_000u) {
+            for _ in range(0us, 1_000_000us) {
                 let entity = entity_manager.create_entity();
                 entity_manager.destroy_entity(entity);
             }
