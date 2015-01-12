@@ -5,8 +5,8 @@ pub trait EntityBuilder<WorldId, S>: 'static {
 }
 
 impl<WorldId, S> EntityBuilder<WorldId, S> for Fn(&mut EntityManager<WorldId>, &mut S, Entity<WorldId>) + 'static {
-    fn build(&mut self, c: &mut EntityManager<WorldId>, s: &mut S, e: Entity<WorldId>) {
-        (*self)(c, s, e);
+    fn build(&mut self, entity_manager: &mut EntityManager<WorldId>, system: &mut S, entity: Entity<WorldId>) {
+        (*self)(entity_manager, system, entity);
     }
 }
 
@@ -15,8 +15,8 @@ pub trait EntityModifier<WorldId, S>: 'static {
 }
 
 impl<WorldId, S> EntityModifier<WorldId, S> for Fn(&mut EntityManager<WorldId>, &mut S, Entity<WorldId>) + 'static {
-    fn modify(&mut self, c: &mut EntityManager<WorldId>, s: &mut S, e: Entity<WorldId>) {
-        (*self)(c, s, e);
+    fn modify(&mut self, entity_manager: &mut EntityManager<WorldId>, system: &mut S, entity: Entity<WorldId>) {
+        (*self)(entity_manager, system, entity);
     }
 }
 
