@@ -18,6 +18,7 @@ const INDEX_MASK: usize = (1 << INDEX_BITS) - 1;
 // even destroying and creating a single entity will still allow
 // 256 * MINIMUM_FREE_ENTITY_INDICES entities to be created before
 // version wraps around
+// TODO get rid of this, fragmentation is likely worse than slightly larger entities
 const MINIMUM_FREE_ENTITY_INDICES: usize = 1000;
 
 pub struct Entity<WorldId> {
