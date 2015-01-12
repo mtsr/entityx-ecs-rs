@@ -5,8 +5,6 @@ use std::iter::{ Iterator, repeat };
 use std::{ usize };
 use std::fmt::{ Show, Formatter, Error };
 
-use std::marker::{ InvariantType };
-
 // TODO get rid of usize here
 // use 1/4 of usize bits for version rest for index
 const INDEX_BITS: usize = usize::BITS / 4 * 3;
@@ -23,17 +21,15 @@ const MINIMUM_FREE_ENTITY_INDICES: usize = 1000;
 
 pub struct Entity<WorldId> {
     id: usize,
-    marker: InvariantType<WorldId>,
 }
 
 impl<'a, WorldId> Entity<WorldId> {
-    pub fn new(marker: InvariantType<WorldId>, index: usize, version: usize) -> Entity<WorldId> {
+    pub fn new(index: usize, version: usize) -> Entity<WorldId> {
         debug_assert!(index & INDEX_MASK as usize == index);
         debug_assert!(version & !INDEX_MASK as usize == version);
 
         Entity {
             id: index | (version << INDEX_BITS),
-            marker: marker,
         }
     }
 
@@ -58,7 +54,6 @@ impl<WorldId> Clone for Entity<WorldId> {
     fn clone(&self) -> Self {
         Entity {
             id: self.id.clone(),
-            marker: self.marker.clone(),
         }
     }
 }
@@ -70,8 +65,6 @@ impl<WorldId> Show for Entity<WorldId> {
 }
 
 pub struct EntityManager<WorldId> {
-    marker: InvariantType<WorldId>,
-
     next_entity_index: usize,
 
     // FIFO
@@ -84,8 +77,6 @@ impl<'a, WorldId> EntityManager<WorldId> {
     pub fn new(initial_capacity: usize) -> EntityManager<WorldId> {
 
         EntityManager {
-            marker: InvariantType,
-
             next_entity_index: 0,
             free_entity_index_list: RingBuf::with_capacity(MINIMUM_FREE_ENTITY_INDICES),
 
@@ -111,7 +102,7 @@ impl<'a, WorldId> EntityManager<WorldId> {
         }
 
         let version = self.entity_versions[index];
-        Entity::new(self.marker.clone(), index, version)
+        Entity::new(index, version)
     }
     pub fn destroy_entity(&mut self, entity: Entity<WorldId>) {
         // TODO clear/invalidate component data
@@ -165,7 +156,7 @@ impl<'a, WorldId> Iterator for EntityIterator<'a, WorldId> {
 
             let version = self.entity_manager.entity_versions[self.index];
 
-            let result = Some(Entity::new(self.entity_manager.marker.clone(), self.index, version));
+            let result = Some(Entity::new(self.index, version));
 
             self.index += 1;
             return result;

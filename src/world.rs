@@ -6,6 +6,9 @@ use system::{ SystemManager, System };
 
 // TODO Add Entity Templates
 // TODO Test serialization feasibility
+// TODO figure out InvariantLifetime alternative to InvariantType
+// since InvariantType leads to code bloat due to multiple
+// monomorphizations
 
 pub struct World<WorldId> {
     entity_manager: EntityManager<WorldId>,
