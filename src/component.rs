@@ -21,9 +21,8 @@ pub trait ComponentList<'a, Component> {
     fn get_mut(&mut self, &usize) -> Option<&mut Component>;
     fn insert(&mut self, usize, Component);
     fn remove(&mut self, key: &usize) -> Option<Component>;
-    // TODO figure out return type
-    // fn iter(&'a self) -> Iterator<(usize, &'a Component)>;
-    // fn iter_mut(&'a self) -> Iterator<(usize, &'a mut Component)>;
+    fn iter(&self) -> Box<Iterator<Item=(usize, &Component)>>;
+    fn iter_mut(&mut self) -> Box<Iterator<Item=(usize, &mut Component)>>;
 }
 
 impl<'a, Component> ComponentList<'a, Component> for VecMap<Component> {
@@ -32,9 +31,8 @@ impl<'a, Component> ComponentList<'a, Component> for VecMap<Component> {
     fn get_mut(&mut self, index: &usize) -> Option<&mut Component> { self.get_mut(index) }
     fn insert(&mut self, index: usize, component: Component) { self.insert(index, component); }
     fn remove(&mut self, key: &usize) -> Option<Component> { self.remove(key) }
-    // TODO figure out return type
-    // fn iter(&'a self) -> Iterator<(usize, &'a Component)> { self.iter() }
-    // fn iter_mut(&'a self) -> Iterator<(usize, &'a mut Component)> { self.iter_mut() }
+    fn iter(&self) -> Box<Iterator<Item=(usize, &Component)>> { Box::new(self.iter()) }
+    fn iter_mut(&mut self) -> Box<Iterator<Item=(usize, &mut Component)>> { Box::new(self.iter_mut()) }
 }
 
 impl<'a, Component> ComponentList<'a, Component> for HashMap<usize, Component> {
@@ -43,9 +41,8 @@ impl<'a, Component> ComponentList<'a, Component> for HashMap<usize, Component> {
     fn get_mut(&mut self, index: &usize) -> Option<&mut Component> { self.get_mut(index) }
     fn insert(&mut self, index: usize, component: Component) { self.insert(index, component); }
     fn remove(&mut self, key: &usize) -> Option<Component> { self.remove(key) }
-    // TODO figure out return type
-    // fn iter(&'a self) -> Iterator<(usize, &'a Component)> { self.iter() }
-    // fn iter_mut(&'a self) -> Iterator<(usize, &'a mut Component)> { self.iter_mut() }
+    fn iter(&self) -> Box<Iterator<Item=(usize, &Component)>> { Box::new(self.iter().map(|(index, component)| (*index, component))) }
+    fn iter_mut(&mut self) -> Box<Iterator<Item=(usize, &mut Component)>> { Box::new(self.iter_mut().map(|(index, component)| (*index, component))) }
 }
 
 pub struct ComponentManager<WorldId> {
