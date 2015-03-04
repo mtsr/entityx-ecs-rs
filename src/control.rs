@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use entity::{ EntityManager, Entity };
 
 pub trait EntityBuilder<WorldId, S>: 'static {
@@ -20,15 +22,17 @@ impl<WorldId, S> EntityModifier<WorldId, S> for Fn(&mut EntityManager<WorldId>, 
     }
 }
 
-pub struct Control<'a, WorldId, S> {
+pub struct Control<WorldId, S> {
+    phantom: PhantomData<WorldId>,
     builders: Vec<Box<EntityBuilder<WorldId, S> + 'static>>,
     destroyed: Vec<Entity<WorldId>>,
     modifiers: Vec<(Entity<WorldId>, Box<EntityModifier<WorldId, S> + 'static>)>,
 }
 
-impl<'a, WorldId, S> Control<'a, WorldId, S> {
-    pub fn new() -> Control<'a, WorldId, S> {
+impl<WorldId, S> Control<WorldId, S> {
+    pub fn new() -> Control<WorldId, S> {
         Control {
+            phantom: PhantomData,
             builders: Vec::new(),
             destroyed: Vec::new(),
             modifiers: Vec::new(),

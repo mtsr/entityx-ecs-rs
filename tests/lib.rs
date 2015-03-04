@@ -1,4 +1,4 @@
-#![allow(unstable)]
+#![feature(test)]
 extern crate test;
 extern crate ecs;
 

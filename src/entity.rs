@@ -1,13 +1,14 @@
-use std::collections::{ RingBuf };
-use std::collections::ring_buf::{ Iter };
+use std::marker::PhantomData;
+use std::collections::{ VecDeque };
+use std::collections::vec_deque::{ Iter };
 
 use std::iter::{ Iterator, repeat };
 use std::{ usize };
-use std::fmt::{ Show, Formatter, Error };
+use std::fmt::{ Debug, Formatter, Error };
 
 // TODO get rid of usize here
 // use 1/4 of usize bits for version rest for index
-const INDEX_BITS: usize = usize::BITS / 4 * 3;
+const INDEX_BITS: usize = (usize::BITS / 4 * 3) as usize;
 const INDEX_MASK: usize = (1 << INDEX_BITS) - 1;
 
 // Necessary to ensure enough versions in limited number of bits
@@ -20,6 +21,7 @@ const INDEX_MASK: usize = (1 << INDEX_BITS) - 1;
 const MINIMUM_FREE_ENTITY_INDICES: usize = 1000;
 
 pub struct Entity<WorldId> {
+    phantom: PhantomData<WorldId>,
     id: usize,
 }
 
@@ -29,6 +31,7 @@ impl<'a, WorldId> Entity<WorldId> {
         debug_assert!(version & !INDEX_MASK as usize == version);
 
         Entity {
+            phantom: PhantomData,
             id: index | (version << INDEX_BITS),
         }
     }
@@ -53,22 +56,24 @@ impl<WorldId> PartialEq for Entity<WorldId> {
 impl<WorldId> Clone for Entity<WorldId> {
     fn clone(&self) -> Self {
         Entity {
+            phantom: PhantomData,
             id: self.id.clone(),
         }
     }
 }
 
-impl<WorldId> Show for Entity<WorldId> {
+impl<WorldId> Debug for Entity<WorldId> {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), Error> {
         self.id.fmt(formatter)
     }
 }
 
 pub struct EntityManager<WorldId> {
+    phantom: PhantomData<WorldId>,
     next_entity_index: usize,
 
     // FIFO
-    free_entity_index_list: RingBuf<usize>,
+    free_entity_index_list: VecDeque<usize>,
 
     entity_versions: Vec<usize>,
 }
@@ -77,10 +82,11 @@ impl<'a, WorldId> EntityManager<WorldId> {
     pub fn new(initial_capacity: usize) -> EntityManager<WorldId> {
 
         EntityManager {
+            phantom: PhantomData,
             next_entity_index: 0,
-            free_entity_index_list: RingBuf::with_capacity(MINIMUM_FREE_ENTITY_INDICES),
+            free_entity_index_list: VecDeque::with_capacity(MINIMUM_FREE_ENTITY_INDICES),
 
-            entity_versions: repeat(0us).take(initial_capacity).collect(),
+            entity_versions: repeat(0usize).take(initial_capacity).collect(),
         }
     }
 
@@ -98,7 +104,7 @@ impl<'a, WorldId> EntityManager<WorldId> {
         if index >= entity_versions_len {
             // grow increases capacity in a smart way
             // no reason to specify particular size here
-            self.entity_versions.extend(repeat(0us).take(entity_versions_len));
+            self.entity_versions.extend(repeat(0usize).take(entity_versions_len));
         }
 
         let version = self.entity_versions[index];
@@ -118,6 +124,7 @@ impl<'a, WorldId> EntityManager<WorldId> {
 
     pub fn entities(&self) -> EntityIterator<WorldId> {
         EntityIterator {
+            phantom: PhantomData,
             entity_manager: self,
             last_entity_index: self.next_entity_index - 1, // last valid entity index
             index: 0,
@@ -127,6 +134,7 @@ impl<'a, WorldId> EntityManager<WorldId> {
 }
 
 pub struct EntityIterator<'a, WorldId: 'a> {
+    phantom: PhantomData<WorldId>,
     entity_manager: &'a EntityManager<WorldId>,
     last_entity_index: usize,
     index: usize,
@@ -201,7 +209,7 @@ mod tests {
 
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
        bencher.iter(|| {
-            for _ in range(0us, 1_000_000us) {
+            for _ in range(0usize, 1_000_000usize) {
                 entity_manager.create_entity();
             }
         });
@@ -214,7 +222,7 @@ mod tests {
         let mut entity_manager: EntityManager<WorldId1> = EntityManager::new(256);
 
         bencher.iter(|| {
-            for _ in range(0us, 1_000_000us) {
+            for _ in range(0usize, 1_000_000usize) {
                 let entity = entity_manager.create_entity();
                 entity_manager.destroy_entity(entity);
             }

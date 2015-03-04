@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use anymap::AnyMap;
 
 use entity::{ EntityManager };
@@ -9,12 +11,14 @@ pub trait System<WorldId, S> {
 }
 
 pub struct SystemManager<WorldId> {
+    phantom: PhantomData<WorldId>,
     systems: AnyMap
 }
 
 impl<WorldId> SystemManager<WorldId> {
     pub fn new() -> SystemManager<WorldId> {
         SystemManager {
+            phantom: PhantomData,
             systems: AnyMap::new()
         }
     }

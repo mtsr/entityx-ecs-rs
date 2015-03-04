@@ -1,4 +1,5 @@
-use std::collections::{ Bitv };
+use std::marker::PhantomData;
+use std::collections::{ BitVec };
 
 use entity::{ EntityManager, Entity, EntityIterator };
 use component::{ ComponentManager, ComponentList, ComponentData };
@@ -11,6 +12,7 @@ use system::{ SystemManager, System };
 // monomorphizations
 
 pub struct World<WorldId> {
+    phantom: PhantomData<WorldId>,
     entity_manager: EntityManager<WorldId>,
     system_manager: SystemManager<WorldId>,
     component_manager: ComponentManager<WorldId>,
@@ -18,9 +20,10 @@ pub struct World<WorldId> {
 
 impl<WorldId> World<WorldId> {
     pub fn new() -> World<WorldId> {
-        let initial_capacity = 256us;
+        let initial_capacity = 256usize;
 
         World {
+            phantom: PhantomData,
             entity_manager: EntityManager::new(initial_capacity),
             system_manager: SystemManager::new(),
             component_manager: ComponentManager::new(initial_capacity),
@@ -86,7 +89,7 @@ impl<WorldId> World<WorldId> {
         self.component_manager.get_component_data_mut::<C>()
     }
 
-    pub fn get_entity_component_mask(&self, entity: &Entity<WorldId>) -> &Bitv {
+    pub fn get_entity_component_mask(&self, entity: &Entity<WorldId>) -> &BitVec {
         self.component_manager.get_entity_component_mask(entity)
     }
 
@@ -239,7 +242,7 @@ mod tests {
 
         let mut world: World<WorldId1> = World::new();
         bencher.iter(|| {
-            for _ in range(0us, 1_000_000us) {
+            for _ in range(0usize, 1_000_000usize) {
                 world.create_entity();
             }
         });
@@ -252,7 +255,7 @@ mod tests {
         let mut world: World<WorldId1> = World::new();
 
         bencher.iter(|| {
-            for _ in range(0us, 1_000_000us) {
+            for _ in range(0usize, 1_000_000usize) {
                 let entity = world.create_entity();
                 world.destroy_entity(entity);
             }
@@ -270,7 +273,7 @@ mod tests {
         world.register_component::<Cmp1>(Box::new(VecMap::new()));
 
         bencher.iter(|| {
-            for _ in range(0us, 1_000_000us) {
+            for _ in range(0usize, 1_000_000usize) {
                 let entity = world.create_entity();
                 world.destroy_entity(entity);
             }
@@ -290,7 +293,7 @@ mod tests {
         world.register_component::<Cmp2>(Box::new(VecMap::new()));
 
         bencher.iter(|| {
-            for _ in range(0us, 1_000_000us) {
+            for _ in range(0usize, 1_000_000usize) {
                 let entity = world.create_entity();
                 world.destroy_entity(entity);
             }

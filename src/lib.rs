@@ -1,6 +1,4 @@
-#![feature(unboxed_closures)]
-// TODO remove once number of warnings goes down
-#![allow(unstable)]
+#![feature(test,collections,core)]
 
 extern crate anymap;
 extern crate test;
@@ -23,7 +21,7 @@ mod component;
 #[cfg(test)]
 mod tests {
     use std::rand::{ Rng, XorShiftRng };
-    use std::collections::{ Bitv, HashMap, VecMap };
+    use std::collections::{ BitVec, HashMap, VecMap };
 
     use super::{
         World,
@@ -55,7 +53,7 @@ mod tests {
         world.register_component::<Cmp4>(Box::new(VecMap::new()));
         world.register_component::<Cmp5>(Box::new(HashMap::new()));
 
-        for _ in range(0us, 100000us) {
+        for _ in range(0usize, 100000usize) {
             let entity = world.create_entity();
             if rng.gen::<f32>() > 0.5f32 {
                 world.assign_component(&entity, Cmp1);
@@ -75,25 +73,25 @@ mod tests {
         }
 
         bencher.iter(|| {
-            world.update_system::<usize, Sys>(&0us);
+            world.update_system::<usize, Sys>(&0usize);
         });
     }
 
     struct WorldId1;
 
-    #[derive(Show)]
+    #[derive(Debug)]
     struct Cmp1;
 
-    #[derive(Show)]
+    #[derive(Debug)]
     struct Cmp2;
 
-    #[derive(Show)]
+    #[derive(Debug)]
     struct Cmp3;
 
-    #[derive(Show)]
+    #[derive(Debug)]
     struct Cmp4;
 
-    #[derive(Show)]
+    #[derive(Debug)]
     struct Cmp5;
 
     struct Sys;
@@ -101,7 +99,7 @@ mod tests {
     impl<WorldId> System<WorldId, Sys> for Sys {
         fn update<A>(&mut self, entity_manager: &EntityManager<WorldId>, component_manager: &ComponentManager<WorldId>, _: &mut Control<WorldId, Sys>, _: &A) {
 
-            let mut counter = 0us;
+            let mut counter = 0usize;
 
             let component_data = (component_manager.get_component_data::<Cmp1>(),)
             .tup_append(component_manager.get_component_data::<Cmp2>())
@@ -109,8 +107,8 @@ mod tests {
             .tup_append(component_manager.get_component_data::<Cmp4>())
             .tup_append(component_manager.get_component_data::<Cmp5>());
 
-            let mut with_mask = Bitv::from_elem(component_manager.get_components_length(), false);
-            let mut without_mask = Bitv::from_elem(component_manager.get_components_length(), false);
+            let mut with_mask = BitVec::from_elem(component_manager.get_components_length(), false);
+            let mut without_mask = BitVec::from_elem(component_manager.get_components_length(), false);
 
             for tuple in entity_manager.entities().filter_map(|entity| {
                 with_mask.set(component_data.1.index, true);
@@ -138,5 +136,5 @@ mod tests {
                 counter += 1;
             }
         }
-   }
+    }
 }
